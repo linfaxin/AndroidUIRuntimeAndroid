@@ -47,11 +47,14 @@ public class RuntimeBridge {
         return this.webViewRef.get();
     }
 
-    protected SurfaceApi createSurfaceApi(Context context){
+    protected SurfaceApi createSurfaceApi(Context context, int surfaceId){
         return new SurfaceApi(context, RuntimeBridge.this);
     }
 
-    protected void onSurfaceApiCreated(SurfaceApi api){
+    protected CanvasApi createCanvasApi(int width, int height){
+        Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new CanvasApi.BitmapCanvas(bitmap);
+        return new CanvasApi(canvas);
     }
 
     private boolean applyTextMeasure = false;
@@ -67,8 +70,7 @@ public class RuntimeBridge {
         execJSOnUI(String.format("androidui.native.NativeSurface.notifySurfaceReady(%d);", surfaceId));
     }
 
-    void notifySurfaceSupportDirtyDraw(SurfaceApi surfaceApi, boolean support){
-        int surfaceId = surfaceInstances.keyAt(surfaceInstances.indexOfValue(surfaceApi));
+    void notifySurfaceSupportDirtyDraw(int surfaceId, boolean support){
         execJSOnUI(String.format("androidui.native.NativeSurface.notifySurfaceSupportDirtyDraw(%d, %b);", surfaceId, support));
     }
 
@@ -84,7 +86,11 @@ public class RuntimeBridge {
         execJSOnUI(String.format("androidui.native.NativeImage.notifyGetPixels(%d, %d, %s);", imageId, callBackIndex, Arrays.toString(data)));
     }
 
-    private void execJSOnUI(final String js){
+    void notifyCanvasCacheEnable(boolean enable){
+        execJSOnUI(String.format("androidui.native.NativeCanvas.notifyCanvasCacheEnable(%b);", enable));
+    }
+
+    protected void execJSOnUI(final String js){
         if(DEBUG) Log.d(TAG, "execJS:"+js.substring(0, Math.min(js.length(), 200)));
         if(Looper.myLooper() == Looper.getMainLooper()){
             execJS(js);
@@ -186,7 +192,7 @@ public class RuntimeBridge {
                     params.leftMargin = (int) left;
                     params.topMargin = (int) top;
 
-                    SurfaceApi surfaceApi = createSurfaceApi(webView.getContext());
+                    SurfaceApi surfaceApi = createSurfaceApi(webView.getContext(), surfaceId);
                     webView.addView(surfaceApi.getSurfaceView(), params);
 
                     SurfaceApi oldApi = surfaceInstances.get(surfaceId);
@@ -197,7 +203,6 @@ public class RuntimeBridge {
                     }
 
                     surfaceInstances.put(surfaceId, surfaceApi);
-                    onSurfaceApiCreated(surfaceApi);
                 }
             });
         }
@@ -263,14 +268,13 @@ public class RuntimeBridge {
     @BatchCallHelper.BatchMethod(value = "33", batchCantSkip = true)
     public void createCanvas(final int canvasId, final float width, final float height){
         if(DEBUG) Log.d(TAG, "createCanvas, canvasId:" + canvasId + ", width:" + width + ", height:" + height);
-        Bitmap bitmap = Bitmap.createBitmap((int) width, (int) height, Bitmap.Config.ARGB_8888);
-        Canvas canvas = new CanvasApi.BitmapCanvas(bitmap);
+        CanvasApi newCanvasApi = createCanvasApi((int)width, (int)height);
         CanvasApi oldCanvasApi = canvasInstances.get(canvasId);
         if(oldCanvasApi!=null){
             Log.e(TAG, "Create canvas warn: there has a old canvasId instance. Override it.");
             oldCanvasApi.recycle();
         }
-        canvasInstances.put(canvasId, new CanvasApi(canvas));
+        canvasInstances.put(canvasId, newCanvasApi);
     }
     @JavascriptInterface
     @BatchCallHelper.BatchMethod("34")
@@ -321,10 +325,10 @@ public class RuntimeBridge {
     }
     @JavascriptInterface
     @BatchCallHelper.BatchMethod("40")
-    public void clearRect(int canvasId, float left, float top, float width, float height){
-        if(DEBUG) Log.d(TAG, "clearRect, canvasId:" + canvasId + ", left:" + left + ", top:" + top + ", width:" + width + ", height:" + height);
+    public void clearColor(int canvasId){
+        if(DEBUG) Log.d(TAG, "clearColor, canvasId:" + canvasId);
         CanvasApi canvasApi = canvasInstances.get(canvasId);
-        canvasApi.clearRect(left, top, width, height);
+        canvasApi.clearColor();
     }
     @JavascriptInterface
     @BatchCallHelper.BatchMethod("41")

@@ -1,7 +1,6 @@
 package org.androidui.runtime;
 
 import android.content.Context;
-import android.util.Log;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebView;
 
@@ -51,18 +50,24 @@ public class RuntimeBridgeHW extends RuntimeBridge{
 
     @JavascriptInterface
     public void batchCall(final String batchString){
-        final HWSurfaceApi surfaceApi = (HWSurfaceApi) surfaceInstances.valueAt(0);
+        final SurfaceApiHW surfaceApi = (SurfaceApiHW) surfaceInstances.valueAt(0);
         if(surfaceApi!=null){
             pendingBatchStrings.add(batchString);
             surfaceApi.postOnDraw(drawBatchRun);
         }
     }
 
-    protected SurfaceApi createSurfaceApi(Context context){
-        return new HWSurfaceApi(context, this);
+    @Override
+    protected SurfaceApi createSurfaceApi(Context context, int surfaceId){
+        notifySurfaceSupportDirtyDraw(surfaceId, false);
+        notifyCanvasCacheEnable(false);
+        return new SurfaceApiHW(context, this);
     }
 
-    protected void onSurfaceApiCreated(SurfaceApi api){
-        notifySurfaceSupportDirtyDraw(api, false);
+    @Override
+    protected CanvasApi createCanvasApi(int width, int height) {
+        return new CanvasApiHW(width, height);
     }
+
+
 }

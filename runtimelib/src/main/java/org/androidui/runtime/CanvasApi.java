@@ -140,11 +140,12 @@ public class CanvasApi {
             canvas.drawColor(color);
         }
     }
-    public void clearRect(float left, float top, float width, float height){
-        if(DEBUG) Log.d(TAG,"clearRect, left:" + left + ", top:" + top + ", width:" + width + ", height:" + height);
+
+    public void clearColor(){
+        if(DEBUG) Log.d(TAG,"clearColor");
         Canvas canvas = getCanvas();
         if(canvas!=null){
-            canvas.drawRect(left, top, width + left, top + height, clearPaint);
+            canvas.drawColor(Color.BLACK, PorterDuff.Mode.CLEAR);
         }
     }
 
@@ -187,12 +188,16 @@ public class CanvasApi {
 
     public void drawCanvas(CanvasApi drawCanvasApi, float offsetX, float offsetY){
         if(DEBUG) Log.d(TAG,"drawCanvas, offsetX:" + offsetX + ", offsetY:" + offsetY);
-        Canvas canvas = getCanvas();
-        Canvas drawCanvas = drawCanvasApi.getCanvas();
-        if(canvas!=null && drawCanvas!=null){
+        drawCanvasApi.drawFromParentCanvas(this, offsetX, offsetY);
+    }
+
+    protected void drawFromParentCanvas(CanvasApi parentCanvasApi, float offsetX, float offsetY){
+        Canvas parentCanvas = parentCanvasApi.getCanvas();
+        Canvas drawCanvas = getCanvas();
+        if(parentCanvas!=null && drawCanvas!=null){
             if(drawCanvas instanceof BitmapCanvas){
                 Bitmap bitmap = ((BitmapCanvas) drawCanvas).bitmap;
-                canvas.drawBitmap(bitmap, offsetX, offsetY, mPaint);
+                parentCanvas.drawBitmap(bitmap, offsetX, offsetY, mPaint);
             }else{
                 throw new RuntimeException("can only draw canvas create with createCanvas");
             }

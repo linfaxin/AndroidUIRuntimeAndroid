@@ -13,9 +13,9 @@ import java.lang.ref.WeakReference;
  * Created by linfaxin on 15/12/18.
  *
  */
-public class HWSurfaceApi extends SurfaceApi{
+public class SurfaceApiHW extends SurfaceApi{
 
-    public HWSurfaceApi(Context context, RuntimeBridge runtimeBridge) {
+    public SurfaceApiHW(Context context, RuntimeBridge runtimeBridge) {
         super(context, runtimeBridge);
     }
 
