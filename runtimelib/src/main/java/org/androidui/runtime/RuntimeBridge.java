@@ -19,6 +19,7 @@ import android.widget.TextView;
 
 import java.lang.ref.WeakReference;
 import java.util.Arrays;
+import java.util.Vector;
 
 /**
  * Created by linfaxin on 15/12/15.
@@ -131,7 +132,7 @@ public class RuntimeBridge {
             this.mFpsNumFrames = 0;
         } else {
             this.mFpsNumFrames++;
-            long frameTime = nowTime - this.mFpsPrevTime;
+//            long frameTime = nowTime - this.mFpsPrevTime;
             long totalTime = nowTime - this.mFpsStartTime;
             //Log.v(ViewRootImpl.TAG, "Frame time:\t" + frameTime);
             this.mFpsPrevTime = nowTime;
@@ -158,17 +159,46 @@ public class RuntimeBridge {
         }
     }
 
+    protected Vector<BatchCallHelper.BatchCallParseResult> pendingBatchResult = new Vector<>();
+    private BatchCallHelper.BatchCallParseResult currentBatchRun;
+    protected Runnable queryPendingAndRun = new Runnable() {
+        @Override
+        public void run() {
+            int size = pendingBatchResult.size();
+            BatchCallHelper.BatchCallParseResult willCallBatchRun;
+
+            if(size==0){//no new draw batch call, draw last.
+                willCallBatchRun = currentBatchRun;
+
+            } else if(size==1){
+                willCallBatchRun = pendingBatchResult.remove(0);
+
+            }else{
+                while(true){
+                    BatchCallHelper.BatchCallParseResult call = pendingBatchResult.remove(0);
+                    if(pendingBatchResult.size() == 0 || BatchCallHelper.cantSkipBatchCall(call)) {
+                        willCallBatchRun = call;
+                        break;
+                    }
+                    call.recycle();
+                }
+            }
+
+            if(currentBatchRun!=null && currentBatchRun!=willCallBatchRun){
+                currentBatchRun.recycle();
+            }
+            currentBatchRun = willCallBatchRun;
+            currentBatchRun.run();
+        }
+    };
+
     @JavascriptInterface
     public void batchCall(final String batchString){
         final View webView = getWebView();
         if(webView!=null){
-            ViewCompat.postOnAnimation(webView, new Runnable() {
-                @Override
-                public void run() {
-                    BatchCallHelper.parseAndRun(RuntimeBridge.this, batchString);
-                    if(DEBUG_TRACK_FPS) trackFPS();
-                }
-            });
+            BatchCallHelper.BatchCallParseResult result = BatchCallHelper.parse(this, batchString);
+            pendingBatchResult.add(result);
+            ViewCompat.postOnAnimation(webView, queryPendingAndRun);
         }
     }
 

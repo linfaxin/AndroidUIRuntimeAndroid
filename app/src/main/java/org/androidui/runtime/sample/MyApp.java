@@ -18,5 +18,6 @@ public class MyApp extends Application{
             WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG);
         }
         RuntimeBridge.DEBUG_TRACK_FPS = true;
+        BatchCallHelper.DEBUG_BATCH_CALL_TIME = false;
     }
 }
