@@ -79,6 +79,12 @@ public class RuntimeBridge {
         int imageId = imageInstances.keyAt(imageInstances.indexOfValue(imageApi));
         execJSOnUI(String.format("androidui.native.NativeImage.notifyLoadFinish(%d, %d, %d);", imageId, width, height));
     }
+    void notifyImageLoadFinish(ImageApi imageApi, int width, int height,
+                               int[] leftBorder, int[] topBorder, int[] rightBorder, int[] bottomBorder){
+        int imageId = imageInstances.keyAt(imageInstances.indexOfValue(imageApi));
+        execJSOnUI(String.format("androidui.native.NativeImage.notifyLoadFinish(%d, %d, %d, %s, %s, %s, %s);", imageId, width, height,
+                Arrays.toString(leftBorder), Arrays.toString(topBorder), Arrays.toString(rightBorder), Arrays.toString(bottomBorder)));
+    }
     void notifyImageLoadError(ImageApi imageApi){
         int imageId = imageInstances.keyAt(imageInstances.indexOfValue(imageApi));
         execJSOnUI(String.format("androidui.native.NativeImage.notifyLoadError(%d);", imageId));

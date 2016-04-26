@@ -82,13 +82,38 @@ public class ImageApi {
         if(loadingTask!=null) LoaderPool.remove(loadingTask);
 
         final String taskUrl = loadingUrl;
+
+        if(taskUrl.startsWith("data:image/png;base64,")){//async if base64 png
+            String base64 = taskUrl.substring("data:image/png;base64,".length());
+            byte[] bitmapArray;
+            bitmapArray = Base64.decode(base64, Base64.DEFAULT);
+            bitmap = BitmapFactory.decodeByteArray(bitmapArray, 0, bitmapArray.length);
+            if(bitmap!=null){
+                int width = bitmap.getWidth();
+                int height = bitmap.getHeight();
+                int[] leftBorder = new int[height-2];
+                int[] topBorder = new int[width-2];
+                int[] rightBorder = new int[height-2];
+                int[] bottomBorder = new int[width-2];
+                bitmap.getPixels(leftBorder, 0, 1, 0, 1, 1, height-1);
+                bitmap.getPixels(topBorder, 0, width-2, 1, 0, width-1, 1);
+                bitmap.getPixels(rightBorder, 0, 1, width-1, 1, width, height-1);
+                bitmap.getPixels(bottomBorder, 0, width-2, 1, height-1, width-1, height);
+                bridge.notifyImageLoadFinish(ImageApi.this, bitmap.getWidth(), bitmap.getHeight(),
+                        leftBorder, topBorder, rightBorder, bottomBorder);
+            }else{
+                bridge.notifyImageLoadError(ImageApi.this);
+            }
+            return;
+        }
+
         loadingTask = new Runnable() {
             @Override
             public void run() {
                 if(!taskUrl.endsWith(loadingUrl)) return;
 
-                if(taskUrl.startsWith("data:image/png;base64,") || taskUrl.startsWith("data:image/jpg;base64,")){
-                    String base64 = taskUrl.substring("data:image/png;base64,".length());
+                if(taskUrl.startsWith("data:image/jpg;base64,")){
+                    String base64 = taskUrl.substring("data:image/jpg;base64,".length());
                     byte[] bitmapArray;
                     bitmapArray = Base64.decode(base64, Base64.DEFAULT);
                     bitmap = BitmapFactory.decodeByteArray(bitmapArray, 0, bitmapArray.length);
