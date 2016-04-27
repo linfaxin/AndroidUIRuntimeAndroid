@@ -307,7 +307,7 @@ public class RuntimeBridge {
         CanvasApi newCanvasApi = createCanvasApi((int)width, (int)height);
         CanvasApi oldCanvasApi = canvasInstances.get(canvasId);
         if(oldCanvasApi!=null){
-            Log.e(TAG, "Create canvas warn: there has a old canvasId instance. Override it.");
+            Log.e(TAG, "Create canvas warn: there has a old canvasId instance. Override it. canvasId: " + canvasId);
             oldCanvasApi.recycle();
         }
         canvasInstances.put(canvasId, newCanvasApi);
@@ -360,7 +360,7 @@ public class RuntimeBridge {
         canvasApi.drawColor((int) color);
     }
     @JavascriptInterface
-    @BatchCallHelper.BatchMethod("40")
+    @BatchCallHelper.BatchMethod(value = "40", batchCantSkip = true)
     public void clearColor(int canvasId){
         if(DEBUG) Log.d(TAG, "clearColor, canvasId:" + canvasId);
         CanvasApi canvasApi = canvasInstances.get(canvasId);
@@ -583,21 +583,21 @@ public class RuntimeBridge {
         imageInstances.put(imageId, imageApi);
     }
     @JavascriptInterface
-    @BatchCallHelper.BatchMethod("81")
+    @BatchCallHelper.BatchMethod(value = "81", batchCantSkip = true)
     public void loadImage(int imageId, String src){
         if(DEBUG) Log.d(TAG, "loadImage, imageId:" + imageId + ", src:" + src);
         ImageApi imageApi = imageInstances.get(imageId);
         imageApi.loadImage(src);
     }
     @JavascriptInterface
-    @BatchCallHelper.BatchMethod("82")
+    @BatchCallHelper.BatchMethod(value = "82", batchCantSkip = true)
     public void recycleImage(int imageId){
         if(DEBUG) Log.d(TAG, "recycleImage, imageId:" + imageId);
         ImageApi imageApi = imageInstances.get(imageId);
         imageApi.recycle();
     }
     @JavascriptInterface
-    @BatchCallHelper.BatchMethod("83")
+    @BatchCallHelper.BatchMethod(value = "83", batchCantSkip = true)
     public void getPixels(int imageId, int callBackIndex, float left, float top, float right, float bottom){
         if(DEBUG) Log.d(TAG, "getPixels, imageId:" + imageId + ", callBackIndex:" + callBackIndex
                 + ", left:" + left+ ", top:" + top+ ", right:" + right+ ", bottom:" + bottom);

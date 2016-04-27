@@ -39,7 +39,7 @@ public class BatchCallHelper {
             if(batchMethod!=null){
                 batchCallMethodCache.put(batchMethod.value(), method);
                 if(batchMethod.batchCantSkip()){
-                    CantSkipMethodNames.add("\n"+batchMethod.value()+"[");
+                    CantSkipMethodNames.add("\n\n"+batchMethod.value()+"\n");
                 }
             }
         }
