@@ -44,7 +44,7 @@ public class CanvasApi {
     protected Matrix mTempMatrix = new Matrix();
     protected final float[] mTempValue = new float[9];
     private ArrayDeque<CanvasPaint> savedPaints = new ArrayDeque<>();
-    private CanvasPaint mPaint;
+    protected CanvasPaint mPaint;
 
     public CanvasApi(Canvas canvas) {
         this.canvas = canvas;
@@ -68,11 +68,13 @@ public class CanvasApi {
             case 2:style = Paint.Style.FILL_AND_STROKE;break;
             default:style = Paint.Style.FILL;break;
         }
+
         if(style == Paint.Style.STROKE){
             mPaint.setColor(mPaint.strokeColor);
         }else{
             mPaint.setColor(mPaint.fillColor);
         }
+
         mPaint.setStyle(style);
     }
 
@@ -269,7 +271,6 @@ public class CanvasApi {
                 mPaint.setColor(color);
                 break;
         }
-
     }
 
     public void multiplyAlpha(float alpha){
@@ -389,9 +390,11 @@ public class CanvasApi {
         }
     }
 
-    private static class CanvasPaint extends Paint{
+    protected static class CanvasPaint extends Paint{
         int strokeColor = Color.BLACK;
         int fillColor = Color.BLACK;
+        int alpha = 255;
+        int color = Color.BLACK;
 
         @Override
         public void reset() {
@@ -401,11 +404,37 @@ public class CanvasApi {
         }
 
         @Override
+        public void setAlpha(int a) {
+            alpha = a;
+            int newAlpha = (int) (Color.alpha(color) * (a/255f));//multiply alpha
+            super.setAlpha(newAlpha);
+        }
+
+        @Override
+        public int getAlpha() {
+            return alpha;
+        }
+
+        @Override
+        public void setColor(int color) {
+            this.color = color;
+            int newAlpha = (int) (Color.alpha(color) * (alpha/255f));//multiply alpha
+            super.setColor(Color.argb(newAlpha, Color.red(color), Color.green(color), Color.blue(color)));
+        }
+
+        @Override
+        public int getColor() {
+            return color;
+        }
+
+        @Override
         public void set(Paint src) {
             super.set(src);
             if(src instanceof CanvasPaint){
                 strokeColor = ((CanvasPaint) src).strokeColor;
                 fillColor = ((CanvasPaint) src).fillColor;
+                setAlpha(((CanvasPaint) src).alpha);
+                setColor(((CanvasPaint) src).color);
             }
         }
     }

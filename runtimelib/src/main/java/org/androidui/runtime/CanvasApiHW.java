@@ -35,6 +35,7 @@ public class CanvasApiHW extends CanvasApi{
         canvas.translate(offsetX, offsetY);
         parentCanvas.clipRect(0, 0, width, height);//clip width & height
 
+        this.mPaint.setAlpha(parentCanvasApi.mPaint.getAlpha());//apply parent canvas's current alpha
         //run records
         for(Runnable run : drawRecords){
             run.run();
@@ -108,7 +109,7 @@ public class CanvasApiHW extends CanvasApi{
 //            }
 //        };
 //        drawRecords.add(runnable);
-        drawRecords.clear();//FIXME clear current clip
+        drawRecords.clear();//FIXME clear on current clip
     }
 
     @Override
