@@ -11,6 +11,7 @@ import android.graphics.PorterDuffXfermode;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.Typeface;
+import android.os.Build;
 import android.support.annotation.Nullable;
 import android.support.v4.util.Pools;
 import android.util.Log;
@@ -397,17 +398,17 @@ public class CanvasApi {
                               float radiusTopRight, float radiusBottomRight, float radiusBottomLeft){
         Canvas canvas = getCanvas();
         if(canvas!=null){
-            mPathTemp.reset();
             mRectFTemp.set(left, top, left + width, top + height);
-            mRadiiTemp[0] = mRadiiTemp[1] = radiusTopLeft;
-            mRadiiTemp[2] = mRadiiTemp[3] = radiusTopRight;
-            mRadiiTemp[4] = mRadiiTemp[5] = radiusBottomRight;
-            mRadiiTemp[6] = mRadiiTemp[7] = radiusBottomLeft;
-            mPathTemp.addRoundRect(mRectFTemp, mRadiiTemp, Path.Direction.CW);
-            try {
+            if(Build.VERSION.SDK_INT>= Build.VERSION_CODES.LOLLIPOP){
+                mPathTemp.reset();
+                mRadiiTemp[0] = mRadiiTemp[1] = radiusTopLeft;
+                mRadiiTemp[2] = mRadiiTemp[3] = radiusTopRight;
+                mRadiiTemp[4] = mRadiiTemp[5] = radiusBottomRight;
+                mRadiiTemp[6] = mRadiiTemp[7] = radiusBottomLeft;
+                mPathTemp.addRoundRect(mRectFTemp, mRadiiTemp, Path.Direction.CW);
                 canvas.clipPath(mPathTemp);
-            } catch (Exception e) {//android 4.0-4.2 not support
-                e.printStackTrace();
+            } else {//android 4.0-4.2 not support, android 4.3 & 4.4 draw bug.
+                canvas.clipRect(mRectFTemp);
             }
         }
     }
