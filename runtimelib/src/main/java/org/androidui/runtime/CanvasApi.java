@@ -5,6 +5,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
+import android.graphics.Path;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffXfermode;
 import android.graphics.Rect;
@@ -41,6 +42,8 @@ public class CanvasApi {
     Canvas canvas;
     private Rect mRectTemp = new Rect();
     private RectF mRectFTemp = new RectF();
+    private float[] mRadiiTemp = new float[8];
+    private Path mPathTemp = new Path();
     protected Matrix mTempMatrix = new Matrix();
     protected final float[] mTempValue = new float[9];
     private ArrayDeque<CanvasPaint> savedPaints = new ArrayDeque<>();
@@ -360,9 +363,35 @@ public class CanvasApi {
         Canvas canvas = getCanvas();
         if(canvas!=null){
             applyPaintStyle(fillStyle);
+
+            mPathTemp.reset();
             mRectFTemp.set(left, top, left + width, top + height);
-            //FIXME not support different radius corner now(use Path to support)
-            canvas.drawRoundRect(mRectFTemp, radiusTopLeft, radiusTopLeft, mPaint);
+            mRadiiTemp[0] = mRadiiTemp[1] = radiusTopLeft;
+            mRadiiTemp[2] = mRadiiTemp[3] = radiusTopRight;
+            mRadiiTemp[4] = mRadiiTemp[5] = radiusBottomRight;
+            mRadiiTemp[6] = mRadiiTemp[7] = radiusBottomLeft;
+            mPathTemp.addRoundRect(mRectFTemp, mRadiiTemp, Path.Direction.CW);
+            canvas.drawPath(mPathTemp, mPaint);
+        }
+    }
+
+
+    public void clipRoundRect(float left, float top, float width, float height, float radiusTopLeft,
+                              float radiusTopRight, float radiusBottomRight, float radiusBottomLeft){
+        Canvas canvas = getCanvas();
+        if(canvas!=null){
+            mPathTemp.reset();
+            mRectFTemp.set(left, top, left + width, top + height);
+            mRadiiTemp[0] = mRadiiTemp[1] = radiusTopLeft;
+            mRadiiTemp[2] = mRadiiTemp[3] = radiusTopRight;
+            mRadiiTemp[4] = mRadiiTemp[5] = radiusBottomRight;
+            mRadiiTemp[6] = mRadiiTemp[7] = radiusBottomLeft;
+            mPathTemp.addRoundRect(mRectFTemp, mRadiiTemp, Path.Direction.CW);
+            try {
+                canvas.clipPath(mPathTemp);
+            } catch (Exception e) {//android 4.0-4.2 not support
+                e.printStackTrace();
+            }
         }
     }
 

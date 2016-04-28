@@ -31,7 +31,6 @@ public class RuntimeBridgeHW extends RuntimeBridge{
     @Override
     protected SurfaceApi createSurfaceApi(Context context, int surfaceId){
         notifySurfaceSupportDirtyDraw(surfaceId, false);
-        notifyCanvasCacheEnable(false);
         return new SurfaceApiHW(context, this);
     }
 

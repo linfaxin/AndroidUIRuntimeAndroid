@@ -5,6 +5,8 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.Path;
+import android.graphics.RectF;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -30,27 +32,30 @@ public class TestActivity extends Activity {
         @Override
         public void draw(Canvas canvas) {
             super.draw(canvas);
-//            canvas.save();
-//            canvas.translate(0, 0);
-//            canvas.clipRect(0, 0, 347, 114);
 
-//            canvas.save();
-//            mPaint.setColor(0xffcccccc);
-//            canvas.drawRect(0, 0, 347, 116, mPaint);
-//            canvas.restore();
+            float left = 100;
+            float top = 100;
+            float width = 300;
+            float height = 300;
+            float radiusTopLeft = 80;
+            float radiusTopRight = 80;
+            float radiusBottomRight = 80;
+            float radiusBottomLeft = 80;
 
-//            canvas.save();
-            canvas.clipRect(30, 0, 287, 116);
-            canvas.translate(30, 30);
+            Path path = new Path();
+//            path.moveTo(left+radiusTopLeft, top);
+//            path.arcTo(left+width-radiusTopRight, top, left+width, top+radiusTopRight, 0, 90, true);
+//            path.close();
 
-//            canvas.save();
-            mPaint.setColor(Color.BLACK);
-            mPaint.setTextSize(42);
-            canvas.drawText("文本Padding10", 0, 45, mPaint);
 
-//            canvas.restore();
-//            canvas.restore();
-//            canvas.restore();
+//            path.arcTo(left+width, top+height, left+width-radiusBottomRight, top+height, radiusBottomRight);
+//            path.arcTo(left, top+height, left, top+height-radiusBottomLeft, radiusBottomLeft);
+//            path.arcTo(left, top, left + radiusTopLeft, top, radiusTopLeft);
+
+            float[] radii = new float[]{200, 200, 200, 200, 200, 200, 200, 200};
+            path.addRoundRect(new RectF(left, top, left+width, top+height), radii, Path.Direction.CW);
+
+            canvas.drawPath(path, mPaint);
 
         }
     }

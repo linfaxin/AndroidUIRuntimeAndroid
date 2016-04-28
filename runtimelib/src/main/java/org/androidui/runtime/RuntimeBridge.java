@@ -93,10 +93,6 @@ public class RuntimeBridge {
         execJSOnUI(String.format("androidui.native.NativeImage.notifyGetPixels(%d, %d, %s);", imageId, callBackIndex, Arrays.toString(data)));
     }
 
-    void notifyCanvasCacheEnable(boolean enable){
-        execJSOnUI(String.format("androidui.native.NativeCanvas.notifyCanvasCacheEnable(%b);", enable));
-    }
-
     protected void execJSOnUI(final String js){
         if(DEBUG) Log.d(TAG, "execJS:"+js.substring(0, Math.min(js.length(), 200)));
         if(Looper.myLooper() == Looper.getMainLooper()){
@@ -535,6 +531,17 @@ public class RuntimeBridge {
                     + radiusBottomRight + ", radiusBottomLeft:" + radiusBottomLeft + ", fillStyle:" + fillStyle);
         CanvasApi canvasApi = canvasInstances.get(canvasId);
         canvasApi.drawRoundRect(left, top, width, height, radiusTopLeft, radiusTopRight, radiusBottomRight, radiusBottomLeft, fillStyle);
+    }
+
+    @JavascriptInterface
+    @BatchCallHelper.BatchMethod("63")
+    public void clipRoundRect(int canvasId, float left, float top, float width, float height, float radiusTopLeft,
+                              float radiusTopRight, float radiusBottomRight, float radiusBottomLeft) {
+        if (DEBUG) Log.d(TAG, "clipRoundRect, canvasId:"+ canvasId +", left:" + left + ", top:" + top + ", width:" + width + ", height:" + height
+                    + ", radiusTopLeft:" + radiusTopLeft + ", radiusTopRight:" + radiusTopRight + ", radiusBottomRight:"
+                    + radiusBottomRight + ", radiusBottomLeft:" + radiusBottomLeft);
+        CanvasApi canvasApi = canvasInstances.get(canvasId);
+        canvasApi.clipRoundRect(left, top, width, height, radiusTopLeft, radiusTopRight, radiusBottomRight, radiusBottomLeft);
     }
 
     //=================draw image=================
