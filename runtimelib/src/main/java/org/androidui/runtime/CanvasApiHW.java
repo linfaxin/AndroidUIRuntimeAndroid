@@ -35,7 +35,7 @@ public class CanvasApiHW extends CanvasApi{
         canvas.translate(offsetX, offsetY);
         parentCanvas.clipRect(0, 0, width, height);//clip width & height
 
-        this.mPaint.setAlpha(parentCanvasApi.mPaint.getAlpha());//apply parent canvas's current alpha
+        this.mPaint.setGlobalAlpha(parentCanvasApi.mPaint.getGlobalAlpha());//apply parent canvas's current alpha
         //run records
         for(Runnable run : drawRecords){
             run.run();
@@ -213,20 +213,20 @@ public class CanvasApiHW extends CanvasApi{
     }
 
     @Override
-    public void multiplyAlpha(final float alpha) {
+    public void multiplyGlobalAlpha(final float alpha) {
         Runnable runnable = new Runnable() {
             public void run() {
-                CanvasApiHW.super.multiplyAlpha(alpha);
+                CanvasApiHW.super.multiplyGlobalAlpha(alpha);
             }
         };
         drawRecords.add(runnable);
     }
 
     @Override
-    public void setAlpha(final float alpha) {
+    public void setGlobalAlpha(final float alpha) {
         Runnable runnable = new Runnable() {
             public void run() {
-                CanvasApiHW.super.setAlpha(alpha);
+                CanvasApiHW.super.setGlobalAlpha(alpha);
             }
         };
         drawRecords.add(runnable);

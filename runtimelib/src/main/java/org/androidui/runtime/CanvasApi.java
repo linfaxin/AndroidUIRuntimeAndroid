@@ -276,14 +276,14 @@ public class CanvasApi {
         }
     }
 
-    public void multiplyAlpha(float alpha){
-        if(DEBUG) Log.d(TAG,"multiplyAlpha, alpha:" + alpha);
-        mPaint.setAlpha((int) (alpha * mPaint.getAlpha()));
+    public void multiplyGlobalAlpha(float alpha){
+        if(DEBUG) Log.d(TAG,"multiplyGlobalAlpha, alpha:" + alpha);
+        mPaint.setGlobalAlpha(alpha * mPaint.getGlobalAlpha());
     }
 
-    public void setAlpha(float alpha){
-        if(DEBUG) Log.d(TAG,"setAlpha, alpha:" + alpha);
-        mPaint.setAlpha((int) (alpha * 255));
+    public void setGlobalAlpha(float alpha){
+        if(DEBUG) Log.d(TAG,"setGlobalAlpha, alpha:" + alpha);
+        mPaint.setGlobalAlpha(alpha);
     }
 
     public void setTextAlign(String textAlign){
@@ -422,7 +422,7 @@ public class CanvasApi {
     protected static class CanvasPaint extends Paint{
         int strokeColor = Color.BLACK;
         int fillColor = Color.BLACK;
-        int alpha = 255;
+        float globalAlpha = 1;
         int color = Color.BLACK;
 
         @Override
@@ -432,22 +432,20 @@ public class CanvasApi {
             fillColor = Color.BLACK;
         }
 
-        @Override
-        public void setAlpha(int a) {
-            alpha = a;
-            int newAlpha = (int) (Color.alpha(color) * (a/255f));//multiply alpha
+        public void setGlobalAlpha(float alpha) {
+            globalAlpha = alpha;
+            int newAlpha = (int) (Color.alpha(color) * alpha);//multiply alpha to color
             super.setAlpha(newAlpha);
         }
 
-        @Override
-        public int getAlpha() {
-            return alpha;
+        public float getGlobalAlpha() {
+            return globalAlpha;
         }
 
         @Override
         public void setColor(int color) {
             this.color = color;
-            int newAlpha = (int) (Color.alpha(color) * (alpha/255f));//multiply alpha
+            int newAlpha = (int) (Color.alpha(color) * globalAlpha);//multiply alpha
             super.setColor(Color.argb(newAlpha, Color.red(color), Color.green(color), Color.blue(color)));
         }
 
@@ -462,7 +460,7 @@ public class CanvasApi {
             if(src instanceof CanvasPaint){
                 strokeColor = ((CanvasPaint) src).strokeColor;
                 fillColor = ((CanvasPaint) src).fillColor;
-                setAlpha(((CanvasPaint) src).alpha);
+                setGlobalAlpha(((CanvasPaint) src).globalAlpha);
                 setColor(((CanvasPaint) src).color);
             }
         }

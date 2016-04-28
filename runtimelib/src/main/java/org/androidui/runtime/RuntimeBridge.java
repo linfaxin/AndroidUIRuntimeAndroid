@@ -434,17 +434,17 @@ public class RuntimeBridge {
     }
     @JavascriptInterface
     @BatchCallHelper.BatchMethod("50")
-    public void multiplyAlpha(int canvasId, float alpha){
-        if(DEBUG) Log.d(TAG, "multiplyAlpha, canvasId:" + canvasId + ", alpha:" + alpha);
+    public void multiplyGlobalAlpha(int canvasId, float alpha){
+        if(DEBUG) Log.d(TAG, "multiplyGlobalAlpha, canvasId:" + canvasId + ", alpha:" + alpha);
         CanvasApi canvasApi = canvasInstances.get(canvasId);
-        canvasApi.multiplyAlpha(alpha);
+        canvasApi.multiplyGlobalAlpha(alpha);
     }
     @JavascriptInterface
     @BatchCallHelper.BatchMethod("51")
-    public void setAlpha(int canvasId, float alpha){
-        if(DEBUG) Log.d(TAG, "setAlpha, canvasId:" + canvasId + ", alpha:" + alpha);
+    public void setGlobalAlpha(int canvasId, float alpha){
+        if(DEBUG) Log.d(TAG, "setGlobalAlpha, canvasId:" + canvasId + ", alpha:" + alpha);
         CanvasApi canvasApi = canvasInstances.get(canvasId);
-        canvasApi.setAlpha(alpha);
+        canvasApi.setGlobalAlpha(alpha);
     }
     @JavascriptInterface
     @BatchCallHelper.BatchMethod("52")
