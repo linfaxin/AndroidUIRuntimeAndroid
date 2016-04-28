@@ -59,7 +59,11 @@ public class SurfaceApiHW extends SurfaceApi{
         @Override
         public void draw(Canvas canvas) {
             super.draw(canvas);
-            drawingCanvas = new CanvasApi(canvas);//FIXME recycle
+            if(drawingCanvas==null){
+                drawingCanvas = new CanvasApi(canvas);
+            }else{
+                drawingCanvas.reset(canvas);
+            }
             if(onDrawRun!=null) onDrawRun.run();
         }
     }

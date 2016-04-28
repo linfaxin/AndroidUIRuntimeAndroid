@@ -58,6 +58,38 @@ public class CanvasApi {
         mTempMatrix.getValues(mTempValue);
     }
 
+    public void reset(Canvas canvas){
+        if(this.canvas!=canvas){
+            if(canvas instanceof BitmapCanvas){
+                if(((BitmapCanvas) canvas).bitmap!=null) ((BitmapCanvas) canvas).bitmap.recycle();
+            }
+        }
+        this.canvas = canvas;
+
+        for(CanvasPaint paint : savedPaints){
+            releasePaint(paint);
+        }
+        savedPaints.clear();
+
+        mPaint.reset();
+    }
+
+    public void recycle(){
+        if(DEBUG) Log.d(TAG, "recycle");
+        Canvas canvas = getCanvas();
+        if(canvas instanceof BitmapCanvas){
+            if(((BitmapCanvas) canvas).bitmap!=null) ((BitmapCanvas) canvas).bitmap.recycle();
+        }
+        this.canvas = null;
+
+        releasePaint(mPaint);
+        for(CanvasPaint paint : savedPaints){
+            releasePaint(paint);
+        }
+        savedPaints.clear();
+        mPaint = null;
+    }
+
     @Nullable
     public Canvas getCanvas(){
         return canvas;
@@ -81,21 +113,6 @@ public class CanvasApi {
         mPaint.setStyle(style);
     }
 
-    public void recycle(){
-        if(DEBUG) Log.d(TAG, "recycle");
-        Canvas canvas = getCanvas();
-        if(canvas instanceof BitmapCanvas){
-            if(((BitmapCanvas) canvas).bitmap!=null) ((BitmapCanvas) canvas).bitmap.recycle();
-        }
-        this.canvas = null;
-
-        releasePaint(mPaint);
-        for(CanvasPaint paint : savedPaints){
-            releasePaint(paint);
-        }
-        savedPaints.clear();
-        mPaint = null;
-    }
 
     public void translate(float tx, float ty){
         if(DEBUG) Log.d(TAG, "translate, tx:"+tx+", ty:"+ty);
