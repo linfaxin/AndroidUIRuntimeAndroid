@@ -47,6 +47,7 @@ public class SurfaceApi implements SurfaceHolder.Callback {
         SurfaceView surfaceView = (SurfaceView) getSurfaceView();
         Canvas canvas = null;
         if(surfaceView!=null){
+
             lockRectTemp.set((int) left, (int) top, (int) right, (int) bottom);
             canvas = surfaceView.getHolder().lockCanvas(lockRectTemp);
             if(canvas==null){

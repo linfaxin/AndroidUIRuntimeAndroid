@@ -58,10 +58,7 @@ public class RuntimeBridge {
         return new CanvasApi(canvas);
     }
 
-    private boolean applyTextMeasure = false;
     void applyTextMeasure(){
-        if(applyTextMeasure) return;
-        applyTextMeasure = true;
         RuntimeInit.initMeasureWidthData();
         execJSOnUI(RuntimeInit.MeasureWidthsJS);
     }
@@ -142,7 +139,7 @@ public class RuntimeBridge {
                 long fps = this.mFpsNumFrames * 1000 / totalTime;
                 Log.d("trachFPS", "FPS:\t" + fps);
                 WebView webView = getWebView();
-                if(mFPSShowText==null && webView!=null){
+                if( (mFPSShowText==null || mFPSShowText.getParent()==null) && webView!=null){
                     Context context = webView.getContext();
                     mFPSShowText = new TextView(context);
                     mFPSShowText.setBackgroundColor(Color.BLACK);
@@ -152,6 +149,7 @@ public class RuntimeBridge {
                     webView.addView(mFPSShowText, layoutParams);
                 }
                 if(mFPSShowText!=null){
+                    if(mFPSShowText.getVisibility()!=View.VISIBLE) mFPSShowText.setVisibility(View.VISIBLE);
                     mFPSShowText.setText("FPS:"+(int)fps);
                 }
 
@@ -200,7 +198,58 @@ public class RuntimeBridge {
         if(webView!=null){
             BatchCallHelper.BatchCallParseResult result = BatchCallHelper.parse(this, batchString);
             pendingBatchResult.add(result);
+            webView.removeCallbacks(queryPendingAndRun);
             ViewCompat.postOnAnimation(webView, queryPendingAndRun);
+        }
+    }
+
+
+    private Runnable allViewInvisibleRun = new Runnable() {
+        @Override
+        public void run() {
+            final ViewGroup webView = getWebView();
+            if(webView!=null) {
+                for (int i = 0, count = webView.getChildCount(); i < count; i++) {
+                    webView.getChildAt(i).setVisibility(View.INVISIBLE);
+                }
+            }
+        }
+    };
+
+    @JavascriptInterface
+    public void pageAlive(int deadDelay){
+        final ViewGroup webView = getWebView();
+        if(webView!=null){
+            webView.removeCallbacks(allViewInvisibleRun);
+            webView.postDelayed(allViewInvisibleRun, deadDelay);
+
+            for (int i = 0, count = webView.getChildCount(); i < count; i++) {
+                webView.getChildAt(i).setVisibility(View.VISIBLE);
+            }
+        }
+    }
+
+    @JavascriptInterface
+    public void initRuntime(){
+        final ViewGroup webView = getWebView();
+        if(webView!=null){
+            webView.post(new Runnable() {
+                @Override
+                public void run() {
+                    webView.removeAllViews();
+                    mFPSShowText = null;
+                    surfaceInstances.clear();
+                    for (int i = 0; i < canvasInstances.size(); i++) {
+                        canvasInstances.valueAt(i).recycle();
+                    }
+                    canvasInstances.clear();
+                    for (int i = 0; i < imageInstances.size(); i++) {
+                        imageInstances.valueAt(i).recycle();
+                    }
+                    imageInstances.clear();
+                    applyTextMeasure();
+                }
+            });
         }
     }
 
@@ -209,7 +258,6 @@ public class RuntimeBridge {
     @BatchCallHelper.BatchMethod(value = "10", batchCantSkip = true)
     public void createSurface(final int surfaceId, final float left, final float top, final float right, final float bottom){
         if(DEBUG) Log.d(TAG, "createSurface, surfaceId:" + surfaceId + ", left:" + left + ", top:" + top + ", right:" + right + ", bottom:" + bottom);
-        applyTextMeasure();
         final ViewGroup webView = getWebView();
         if(webView!=null) {
             //do on ui thread
