@@ -1,5 +1,6 @@
 package org.androidui.runtime;
 
+import android.app.Activity;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
@@ -15,6 +16,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebView;
+import android.widget.AbsoluteLayout;
 import android.widget.TextView;
 
 import java.lang.ref.WeakReference;
@@ -253,6 +255,14 @@ public class RuntimeBridge {
         }
     }
 
+    @JavascriptInterface
+    public void closeApp(){
+        final WebView webView = getWebView();
+        if(webView!=null) {
+            ((Activity)webView.getContext()).finish();
+        }
+    }
+
     //================= surface api =================
     @JavascriptInterface
     @BatchCallHelper.BatchMethod(value = "10", batchCantSkip = true)
@@ -268,9 +278,7 @@ public class RuntimeBridge {
                     int height = (int) (bottom - top);
                     if (width < 0 || right < 0) width = -1;
                     if (height < 0 || bottom < 0) height = -1;
-                    final ViewGroup.MarginLayoutParams params = new ViewGroup.MarginLayoutParams(width, height);
-                    params.leftMargin = (int) left;
-                    params.topMargin = (int) top;
+                    final AbsoluteLayout.LayoutParams params = new AbsoluteLayout.LayoutParams(width, height, (int)left, (int)top);
 
                     SurfaceApi surfaceApi = createSurfaceApi(webView.getContext(), surfaceId);
                     webView.addView(surfaceApi.getSurfaceView(), params);
@@ -296,15 +304,15 @@ public class RuntimeBridge {
         SurfaceApi surfaceApi = surfaceInstances.get(surfaceId);
         final View surfaceView = surfaceApi.getSurfaceView();
         if(surfaceView!=null){
-            ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams) surfaceView.getLayoutParams();
+            AbsoluteLayout.LayoutParams params = (AbsoluteLayout.LayoutParams) surfaceView.getLayoutParams();
             int width = (int) (right-left);
             int height = (int) (bottom - top);
             if(width<0 || right<0) width = -1;
             if(height<0 || bottom<0) height = -1;
             params.width = width;
             params.height = height;
-            params.leftMargin = (int) left;
-            params.topMargin = (int) top;
+            params.x = (int) left;
+            params.y = (int) top;
 
             surfaceView.post(new Runnable() {
                 @Override
