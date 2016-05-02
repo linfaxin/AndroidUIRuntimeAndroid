@@ -16,7 +16,9 @@ import android.util.SparseArray;
 import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.JavascriptInterface;
+import android.webkit.WebBackForwardList;
 import android.webkit.WebView;
+import android.webkit.WebViewClient;
 import android.widget.AbsoluteLayout;
 import android.widget.TextView;
 
@@ -31,11 +33,14 @@ import java.util.Vector;
 public class RuntimeBridge {
     protected final static String TAG = "RuntimeBridge";
     protected final static boolean DEBUG = false;
+    protected final static boolean DEBUG_RUNJS = true;
+    protected final static boolean DEBUG_WEBVIEW = true;
     public static boolean DEBUG_TRACK_FPS = false;
 
     protected SparseArray<SurfaceApi> surfaceInstances = new SparseArray<>();
     private SparseArray<CanvasApi> canvasInstances = new SparseArray<>();
     SparseArray<ImageApi> imageInstances = new SparseArray<>();
+    private SparseArray<WebView> webViewInstances = new SparseArray<>();
     Rect showingEditTextBound = new Rect();
 
     private WeakReference<WebView> webViewRef;
@@ -94,7 +99,7 @@ public class RuntimeBridge {
     }
 
     protected void execJSOnUI(final String js){
-        if(DEBUG) Log.d(TAG, "execJS:"+js.substring(0, Math.min(js.length(), 200)));
+        if(DEBUG_RUNJS) Log.d(TAG, "execJS:"+js.substring(0, Math.min(js.length(), 200)));
         if(Looper.myLooper() == Looper.getMainLooper()){
             execJS(js);
         }else {
@@ -252,10 +257,13 @@ public class RuntimeBridge {
                     showingEditTextBound.setEmpty();
                     mFPSShowText = null;
                     surfaceInstances.clear();
+                    webViewInstances.clear();
+
                     for (int i = 0; i < canvasInstances.size(); i++) {
                         canvasInstances.valueAt(i).recycle();
                     }
                     canvasInstances.clear();
+
                     for (int i = 0; i < imageInstances.size(); i++) {
                         imageInstances.valueAt(i).recycle();
                     }
@@ -689,11 +697,173 @@ public class RuntimeBridge {
     //==========================editText api==========================
     @JavascriptInterface
     public void showEditText(int viewHash, float left, float top, float right, float bottom){
-        showingEditTextBound.set((int)left, (int)top, (int)right, (int)bottom);
+        if(DEBUG) Log.d(TAG, "showEditText, viewHash:" + viewHash + ", left:"+left + ", top:"+top + ", right:"+right+", bottom:"+bottom);
+        showingEditTextBound.set((int) left, (int) top, (int) right, (int) bottom);
     }
     @JavascriptInterface
     public void hideEditText(int viewHash){
+        if(DEBUG) Log.d(TAG, "hideEditText, viewHash:" + viewHash);
         showingEditTextBound.setEmpty();
     }
 
+
+    //==========================webView api==========================
+    private void notifyWebViewLoadFinish(int viewHash, String url, String title){
+        execJSOnUI(String.format("androidui.native.NativeWebView.notifyLoadFinish(%d, '%s', '%s');", viewHash, url, title));
+    }
+    private void notifyWebViewHistoryChange(int viewHash, int currentHistoryIndex, int historySize){
+        execJSOnUI(String.format("androidui.native.NativeWebView.notifyWebViewHistoryChange(%d, %d, %d);", viewHash, currentHistoryIndex, historySize));
+    }
+    @JavascriptInterface
+    public void createWebView(final int viewHash){
+        if(DEBUG_WEBVIEW) Log.d(TAG, "createWebView, viewHash:" + viewHash);
+        final WebView containWebView = getWebView();
+        if(containWebView!=null) {
+            containWebView.post(new Runnable() {
+                @Override
+                public void run() {
+                    WebView newWebView = new WebView(containWebView.getContext());
+                    newWebView.setWebViewClient(new WebViewClient() {
+                        @Override
+                        public void onPageFinished(WebView view, String url) {
+                            super.onPageFinished(view, url);
+                            notifyWebViewLoadFinish(viewHash, url, view.getTitle());
+
+                            WebBackForwardList historyList = view.copyBackForwardList();
+                            notifyWebViewHistoryChange(viewHash, historyList.getCurrentIndex(), historyList.getSize());
+                        }
+
+                        @Override
+                        public void doUpdateVisitedHistory(WebView view, String url, boolean isReload) {
+                            super.doUpdateVisitedHistory(view, url, isReload);
+
+                            WebBackForwardList historyList = view.copyBackForwardList();
+                            notifyWebViewHistoryChange(viewHash, historyList.getCurrentIndex(), historyList.getSize());
+                        }
+                    });
+                    WebView oldWebView = webViewInstances.get(viewHash);
+                    if (oldWebView != null) {
+                        Log.e(TAG, "Create WebView warn: there has a old WebView instance. Override it. viewHash:" + viewHash);
+                        containWebView.removeView(oldWebView);
+                    }
+                    webViewInstances.put(viewHash, newWebView);
+                    containWebView.addView(newWebView, 0, 0);
+                }
+            });
+        }
+    }
+
+    @JavascriptInterface
+    public void destroyWebView(final int viewHash){
+        if(DEBUG_WEBVIEW) Log.d(TAG, "destroyWebView, viewHash:" + viewHash);
+        final WebView containWebView = getWebView();
+        if(containWebView!=null) {
+            containWebView.post(new Runnable() {
+                @Override
+                public void run() {
+                    WebView oldWebView = webViewInstances.get(viewHash);
+                    if (oldWebView != null) {
+                        containWebView.removeView(oldWebView);
+                        webViewInstances.remove(viewHash);
+                    }
+                }
+            });
+        }
+    }
+
+    @JavascriptInterface
+    public void webViewBoundChange(final int viewHash, final float left, final float top, final float right, final float bottom){
+        if(DEBUG_WEBVIEW) Log.d(TAG, "webViewBoundChange, viewHash:" + viewHash + ", left:"+left + ", top:"+top + ", right:"+right+", bottom:"+bottom);
+
+        final WebView containWebView = getWebView();
+        if(containWebView!=null) {
+            containWebView.post(new Runnable() {
+                @Override
+                public void run() {
+                    WebView subWebView = webViewInstances.get(viewHash);
+                    if (subWebView != null) {
+                        if (subWebView.getParent() == null) {
+                            WebView containWebView = getWebView();
+                            if (containWebView != null) {
+                                AbsoluteLayout.LayoutParams layoutParams = new AbsoluteLayout.LayoutParams((int) (right - left), (int) (bottom - top), (int) left, (int) top);
+                                containWebView.addView(subWebView, layoutParams);
+                            }
+                        } else {
+                            AbsoluteLayout.LayoutParams layoutParams = (AbsoluteLayout.LayoutParams) subWebView.getLayoutParams();
+                            if (layoutParams == null) {
+                                layoutParams = new AbsoluteLayout.LayoutParams((int) (right - left), (int) (bottom - top), (int) left, (int) top);
+                            } else {
+                                layoutParams.x = (int) left;
+                                layoutParams.y = (int) top;
+                                layoutParams.width = (int) (right - left);
+                                layoutParams.height = (int) (bottom - top);
+                            }
+                            subWebView.setLayoutParams(layoutParams);
+                        }
+
+                    } else {
+                        Log.w(TAG, "warn: no WebView instance. viewHash:" + viewHash);
+                    }
+                }
+            });
+        }
+    }
+
+    @JavascriptInterface
+    public void webViewLoadUrl(final int viewHash, final String url){
+        if(DEBUG_WEBVIEW) Log.d(TAG, "webViewLoadUrl, viewHash:" + viewHash + ", url:"+url);
+
+        final WebView containWebView = getWebView();
+        if(containWebView!=null) {
+            containWebView.post(new Runnable() {
+                @Override
+                public void run() {
+                    WebView subWebView = webViewInstances.get(viewHash);
+                    if(subWebView!=null) {
+                        subWebView.loadUrl(url);
+                    } else {
+                        Log.w(TAG, "warn: no WebView instance. viewHash:" + viewHash);
+                    }
+                }
+            });
+        }
+    }
+
+    @JavascriptInterface
+    public void webViewGoBack(final int viewHash){
+        if(DEBUG_WEBVIEW) Log.d(TAG, "webViewGoBack, viewHash:" + viewHash);
+        final WebView containWebView = getWebView();
+        if(containWebView!=null) {
+            containWebView.post(new Runnable() {
+                @Override
+                public void run() {
+                    final WebView subWebView = webViewInstances.get(viewHash);
+                    if (subWebView != null) {
+                        subWebView.goBack();
+                    } else {
+                        Log.w(TAG, "warn: no WebView instance. viewHash:" + viewHash);
+                    }
+                }
+            });
+        }
+    }
+
+    @JavascriptInterface
+    public void webViewReload(final int viewHash){
+        if(DEBUG_WEBVIEW) Log.d(TAG, "webViewReload, viewHash:" + viewHash);
+        final WebView containWebView = getWebView();
+        if(containWebView!=null) {
+            containWebView.post(new Runnable() {
+                @Override
+                public void run() {
+                    final WebView subWebView = webViewInstances.get(viewHash);
+                    if (subWebView != null) {
+                        subWebView.reload();
+                    } else {
+                        Log.w(TAG, "warn: no WebView instance. viewHash:" + viewHash);
+                    }
+                }
+            });
+        }
+    }
 }
