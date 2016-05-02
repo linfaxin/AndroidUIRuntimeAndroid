@@ -6,11 +6,8 @@ import android.graphics.Canvas;
 import android.graphics.Rect;
 import android.support.annotation.Nullable;
 import android.support.v4.view.ViewCompat;
-import android.util.Log;
 import android.view.View;
 import android.webkit.WebView;
-
-import java.lang.ref.WeakReference;
 
 /**
  * Created by linfaxin on 15/12/18.
@@ -59,21 +56,9 @@ public class SurfaceApiHW extends SurfaceApi{
             drawingCanvas.reset(canvas);
             if(postOnDrawRun!=null) postOnDrawRun.run();
 
-            Rect rect = runtimeBridge.showingEditTextBound;
-            if(!rect.isEmpty()){
-                skipDrawFlag = true;
-                WebView webView = runtimeBridge.getWebView();
-                if(webView!=null){
-                    Bitmap bitmap = Bitmap.createBitmap(rect.width(), rect.height(), Bitmap.Config.ARGB_8888);
-                    Canvas canvasTmp = new Canvas(bitmap);
-                    canvasTmp.translate(-rect.left, -rect.top);
-                    webView.draw(canvasTmp);
-                    canvas.drawBitmap(bitmap, rect.left, rect.top, null);
-                    bitmap.recycle();
-                }
-                skipDrawFlag = false;
-                postInvalidateDelayed(300);
-            }
+            skipDrawFlag = true;
+            runtimeBridge.drawHTMLBoundToCanvas(canvas);
+            skipDrawFlag = false;
         }
     }
 }

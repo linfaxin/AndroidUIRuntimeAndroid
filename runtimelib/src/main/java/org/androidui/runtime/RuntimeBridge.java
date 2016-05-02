@@ -33,15 +33,16 @@ import java.util.Vector;
 public class RuntimeBridge {
     protected final static String TAG = "RuntimeBridge";
     protected final static boolean DEBUG = false;
-    protected final static boolean DEBUG_RUNJS = true;
-    protected final static boolean DEBUG_WEBVIEW = true;
+    protected final static boolean DEBUG_RUNJS = false;
+    protected final static boolean DEBUG_WEBVIEW = false;
     public static boolean DEBUG_TRACK_FPS = false;
 
     protected SparseArray<SurfaceApi> surfaceInstances = new SparseArray<>();
     private SparseArray<CanvasApi> canvasInstances = new SparseArray<>();
     SparseArray<ImageApi> imageInstances = new SparseArray<>();
     private SparseArray<WebView> webViewInstances = new SparseArray<>();
-    Rect showingEditTextBound = new Rect();
+    private SparseArray<Rect> drawHTMLBounds = new SparseArray<>();
+    private Rect mRectTmp = new Rect();
 
     private WeakReference<WebView> webViewRef;
 
@@ -254,7 +255,7 @@ public class RuntimeBridge {
                 @Override
                 public void run() {
                     webView.removeAllViews();
-                    showingEditTextBound.setEmpty();
+                    drawHTMLBounds.clear();
                     mFPSShowText = null;
                     surfaceInstances.clear();
                     webViewInstances.clear();
@@ -297,7 +298,7 @@ public class RuntimeBridge {
                     int height = (int) (bottom - top);
                     if (width < 0 || right < 0) width = -1;
                     if (height < 0 || bottom < 0) height = -1;
-                    final AbsoluteLayout.LayoutParams params = new AbsoluteLayout.LayoutParams(width, height, (int)left, (int)top);
+                    final AbsoluteLayout.LayoutParams params = new AbsoluteLayout.LayoutParams(width, height, (int) left, (int) top);
 
                     SurfaceApi surfaceApi = createSurfaceApi(webView.getContext(), surfaceId);
                     webView.addView(surfaceApi.getSurfaceView(), params);
@@ -359,6 +360,7 @@ public class RuntimeBridge {
         if(DEBUG) Log.d(TAG, "unlockCanvasAndPost, surfaceId:" + surfaceId + ", canvasId:" + canvasId);
         SurfaceApi surfaceApi = surfaceInstances.get(surfaceId);
         CanvasApi canvasApi = canvasInstances.get(canvasId);
+        drawHTMLBoundToCanvas(canvasApi.getCanvas());
         surfaceApi.unlockCanvasAndPost(canvasApi);
 
         //recycle canvas
@@ -375,7 +377,7 @@ public class RuntimeBridge {
     @BatchCallHelper.BatchMethod(value = "33", batchCantSkip = true)
     public void createCanvas(final int canvasId, final float width, final float height){
         if(DEBUG) Log.d(TAG, "createCanvas, canvasId:" + canvasId + ", width:" + width + ", height:" + height);
-        CanvasApi newCanvasApi = createCanvasApi((int)width, (int)height);
+        CanvasApi newCanvasApi = createCanvasApi((int) width, (int) height);
         CanvasApi oldCanvasApi = canvasInstances.get(canvasId);
         if(oldCanvasApi!=null){
             Log.e(TAG, "Create canvas warn: there has a old canvasId instance. Override it. canvasId: " + canvasId);
@@ -694,16 +696,40 @@ public class RuntimeBridge {
         }
     }
 
-    //==========================editText api==========================
+    //==========================DrawHTMLBound api==========================
     @JavascriptInterface
-    public void showEditText(int viewHash, float left, float top, float right, float bottom){
-        if(DEBUG) Log.d(TAG, "showEditText, viewHash:" + viewHash + ", left:"+left + ", top:"+top + ", right:"+right+", bottom:"+bottom);
-        showingEditTextBound.set((int) left, (int) top, (int) right, (int) bottom);
+    public void showDrawHTMLBound(int viewHash, float left, float top, float right, float bottom){
+        if(DEBUG) Log.d(TAG, "showDrawHTMLBound, viewHash:" + viewHash + ", left:"+left + ", top:"+top + ", right:"+right+", bottom:"+bottom);
+        Rect drawHTMLBound = drawHTMLBounds.get(viewHash);
+        if(drawHTMLBound==null){
+            drawHTMLBound = new Rect((int) left, (int) top, (int) right, (int) bottom);
+            drawHTMLBounds.put(viewHash, drawHTMLBound);
+        } else {
+            drawHTMLBound.set((int) left, (int) top, (int) right, (int) bottom);
+        }
     }
     @JavascriptInterface
-    public void hideEditText(int viewHash){
-        if(DEBUG) Log.d(TAG, "hideEditText, viewHash:" + viewHash);
-        showingEditTextBound.setEmpty();
+    public void hideDrawHTMLBound(int viewHash){
+        if(DEBUG) Log.d(TAG, "hideDrawHTMLBound, viewHash:" + viewHash);
+        drawHTMLBounds.remove(viewHash);
+    }
+
+    void drawHTMLBoundToCanvas(Canvas canvas){
+        WebView webView = getWebView();
+        if(webView!=null){
+            mRectTmp.setEmpty();
+            for (int i = 0; i < drawHTMLBounds.size(); i++) {
+                mRectTmp.union(drawHTMLBounds.valueAt(i));
+            }
+            if(!mRectTmp.isEmpty()) {
+                Bitmap bitmap = Bitmap.createBitmap(mRectTmp.width(), mRectTmp.height(), Bitmap.Config.ARGB_8888);
+                Canvas canvasTmp = new Canvas(bitmap);
+                canvasTmp.translate(-mRectTmp.left, -mRectTmp.top);
+                webView.draw(canvasTmp);
+                canvas.drawBitmap(bitmap, mRectTmp.left, mRectTmp.top, null);
+                bitmap.recycle();
+            }
+        }
     }
 
 

@@ -18,6 +18,7 @@ public class RuntimeBridgeHW extends RuntimeBridge{
         super(webView);
     }
 
+    @Override
     @JavascriptInterface
     public void batchCall(final String batchString){
         final SurfaceApiHW surfaceApi = (SurfaceApiHW) surfaceInstances.valueAt(0);
@@ -39,5 +40,19 @@ public class RuntimeBridgeHW extends RuntimeBridge{
         return new CanvasApiHW(width, height);
     }
 
+    @Override
+    @JavascriptInterface
+    public void showDrawHTMLBound(int viewHash, float left, float top, float right, float bottom) {
+        super.showDrawHTMLBound(viewHash, left, top, right, bottom);
+        WebView webView = getWebView();
+        if(webView!=null) ViewCompat.postInvalidateOnAnimation(webView);
+    }
 
+    @Override
+    @JavascriptInterface
+    public void hideDrawHTMLBound(int viewHash) {
+        super.hideDrawHTMLBound(viewHash);
+        WebView webView = getWebView();
+        if(webView!=null) ViewCompat.postInvalidateOnAnimation(webView);
+    }
 }
