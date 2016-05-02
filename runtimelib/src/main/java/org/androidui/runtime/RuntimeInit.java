@@ -1,6 +1,7 @@
 package org.androidui.runtime;
 
 import android.content.Context;
+import android.graphics.Color;
 import android.graphics.Paint;
 import android.view.View;
 import android.view.ViewGroup;
@@ -33,6 +34,9 @@ public class RuntimeInit {
     protected static WeakHashMap<ViewGroup, RuntimeBridge> weakInstanceMap = new WeakHashMap<>();
     public static RuntimeBridge initWebView(WebView webView){
         init(webView.getContext().getApplicationContext());
+
+        //for editText override draw.
+        webView.setBackgroundColor(Color.TRANSPARENT);
 
         RuntimeBridge bridge = weakInstanceMap.get(webView);
         if(bridge==null){

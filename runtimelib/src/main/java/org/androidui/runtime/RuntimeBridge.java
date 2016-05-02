@@ -6,6 +6,7 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.Rect;
 import android.os.Build;
 import android.os.Looper;
 import android.support.annotation.Nullable;
@@ -35,7 +36,7 @@ public class RuntimeBridge {
     protected SparseArray<SurfaceApi> surfaceInstances = new SparseArray<>();
     private SparseArray<CanvasApi> canvasInstances = new SparseArray<>();
     SparseArray<ImageApi> imageInstances = new SparseArray<>();
-
+    Rect showingEditTextBound = new Rect();
 
     private WeakReference<WebView> webViewRef;
 
@@ -218,16 +219,25 @@ public class RuntimeBridge {
         }
     };
 
+    private Runnable allViewVisibleRun = new Runnable() {
+        @Override
+        public void run() {
+            final ViewGroup webView = getWebView();
+            if(webView!=null) {
+                for (int i = 0, count = webView.getChildCount(); i < count; i++) {
+                    webView.getChildAt(i).setVisibility(View.VISIBLE);
+                }
+            }
+        }
+    };
+
     @JavascriptInterface
     public void pageAlive(int deadDelay){
         final ViewGroup webView = getWebView();
         if(webView!=null){
             webView.removeCallbacks(allViewInvisibleRun);
             webView.postDelayed(allViewInvisibleRun, deadDelay);
-
-            for (int i = 0, count = webView.getChildCount(); i < count; i++) {
-                webView.getChildAt(i).setVisibility(View.VISIBLE);
-            }
+            webView.post(allViewVisibleRun);
         }
     }
 
@@ -239,6 +249,7 @@ public class RuntimeBridge {
                 @Override
                 public void run() {
                     webView.removeAllViews();
+                    showingEditTextBound.setEmpty();
                     mFPSShowText = null;
                     surfaceInstances.clear();
                     for (int i = 0; i < canvasInstances.size(); i++) {
@@ -632,9 +643,8 @@ public class RuntimeBridge {
     }
 
     //=================image api==================
-
     @JavascriptInterface
-    @BatchCallHelper.BatchMethod(value = "80", batchCantSkip = true)
+//    @BatchCallHelper.BatchMethod(value = "80", batchCantSkip = true)
     public void createImage(int imageId){
         if(DEBUG) Log.d(TAG, "createImage, imageId:" + imageId);
         ImageApi imageApi = new ImageApi(this);
@@ -646,21 +656,21 @@ public class RuntimeBridge {
         imageInstances.put(imageId, imageApi);
     }
     @JavascriptInterface
-    @BatchCallHelper.BatchMethod(value = "81", batchCantSkip = true)
+//    @BatchCallHelper.BatchMethod(value = "81", batchCantSkip = true)
     public void loadImage(int imageId, String src){
         if(DEBUG) Log.d(TAG, "loadImage, imageId:" + imageId + ", src:" + src);
         ImageApi imageApi = imageInstances.get(imageId);
         imageApi.loadImage(src);
     }
     @JavascriptInterface
-    @BatchCallHelper.BatchMethod(value = "82", batchCantSkip = true)
+//    @BatchCallHelper.BatchMethod(value = "82", batchCantSkip = true)
     public void recycleImage(int imageId){
         if(DEBUG) Log.d(TAG, "recycleImage, imageId:" + imageId);
         ImageApi imageApi = imageInstances.get(imageId);
         imageApi.recycle();
     }
     @JavascriptInterface
-    @BatchCallHelper.BatchMethod(value = "83", batchCantSkip = true)
+//    @BatchCallHelper.BatchMethod(value = "83", batchCantSkip = true)
     public void getPixels(int imageId, int callBackIndex, float left, float top, float right, float bottom){
         if(DEBUG) Log.d(TAG, "getPixels, imageId:" + imageId + ", callBackIndex:" + callBackIndex
                 + ", left:" + left+ ", top:" + top+ ", right:" + right+ ", bottom:" + bottom);
@@ -674,6 +684,16 @@ public class RuntimeBridge {
             bitmap.getPixels(data, 0, width, (int)left, (int)top, width, height);
             notifyImageGetPixels(imageId, callBackIndex, data);
         }
+    }
+
+    //==========================editText api==========================
+    @JavascriptInterface
+    public void showEditText(int viewHash, float left, float top, float right, float bottom){
+        showingEditTextBound.set((int)left, (int)top, (int)right, (int)bottom);
+    }
+    @JavascriptInterface
+    public void hideEditText(int viewHash){
+        showingEditTextBound.setEmpty();
     }
 
 }

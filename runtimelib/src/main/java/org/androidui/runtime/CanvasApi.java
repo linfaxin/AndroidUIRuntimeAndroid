@@ -50,7 +50,7 @@ public class CanvasApi {
     private ArrayDeque<CanvasPaint> savedPaints = new ArrayDeque<>();
     protected CanvasPaint mPaint;
 
-    public CanvasApi(Canvas canvas) {
+    public CanvasApi(@Nullable Canvas canvas) {
         this.canvas = canvas;
         mPaint = new CanvasPaint();
         mPaint.setAntiAlias(true);

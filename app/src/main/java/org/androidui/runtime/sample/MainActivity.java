@@ -39,7 +39,8 @@ public class MainActivity extends Activity {
 
         }else{
             final EditText editText = new EditText(this);
-            editText.setText("http://172.16.3.240:8765/sample/main.html");
+//            editText.setText("http://172.16.3.240:8765/sample/main.html");
+            editText.setText("http://192.168.31.107:8000/sample/main.html");
 //            editText.setText("http://linfaxin.com/AndroidUI-WebApp/sample/main.html");
             new AlertDialog.Builder(this)
                     .setTitle("输入网址")
