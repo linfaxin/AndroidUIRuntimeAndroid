@@ -35,7 +35,7 @@ public class RuntimeInit {
     public static RuntimeBridge initWebView(WebView webView){
         init(webView.getContext().getApplicationContext());
 
-        //for editText override draw.
+        //for editText/htmlView overlay draw.
         webView.setBackgroundColor(Color.TRANSPARENT);
 
         RuntimeBridge bridge = weakInstanceMap.get(webView);

@@ -1,14 +1,53 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout
+<LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:padding="16dp"
+    android:gravity="center_horizontal"
+    android:orientation="vertical"
     tools:context=".MainActivity">
 
-    <WebView
-        android:id="@+id/webView"
+    <TextView
+        android:text="AndroidUI Runtime"
+        android:textSize="32dp"
+        android:layout_marginBottom="40dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"/>
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:tag="http://linfaxin.com/AndroidUI-WebApp/sample/main.html"
+        android:onClick="openWeb"
+        android:text="1.AndroidUI Sample"/>
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:tag="http://linfaxin.com/GankWebApp"
+        android:onClick="openWeb"
+        android:text="2.Gank.io WebApp"/>
+    <TextView
+        android:text="or"
+        android:layout_margin="12dp"
+        android:textSize="22dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"/>
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"/>
+        android:layout_height="wrap_content">
+        <EditText
+            android:id="@+id/site_input"
+            android:hint="your AndroidUI-WebApp site"
+            android:layout_weight="1"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"/>
+        <Button
+            android:id="@+id/site_input_go_btn"
+            android:text="GO"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
 
-</FrameLayout>
+    </LinearLayout>
+
+</LinearLayout>
