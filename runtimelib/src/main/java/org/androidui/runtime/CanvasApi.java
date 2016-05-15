@@ -220,7 +220,9 @@ public class CanvasApi {
         if(parentCanvas!=null && drawCanvas!=null){
             if(drawCanvas instanceof BitmapCanvas){
                 Bitmap bitmap = ((BitmapCanvas) drawCanvas).bitmap;
-                parentCanvas.drawBitmap(bitmap, offsetX, offsetY, mPaint);
+                if(bitmap!=null && !bitmap.isRecycled()){
+                    parentCanvas.drawBitmap(bitmap, offsetX, offsetY, mPaint);
+                }
             }else{
                 throw new RuntimeException("can only draw canvas create with createCanvas");
             }
@@ -232,7 +234,7 @@ public class CanvasApi {
         Canvas canvas = getCanvas();
         if(canvas!=null) {
             Bitmap bitmap = imageApi.getBitmap();
-            if (bitmap != null) {
+            if (bitmap != null && !bitmap.isRecycled()) {
                 canvas.drawBitmap(bitmap, left, top, mPaint);
             }
         }
@@ -242,7 +244,7 @@ public class CanvasApi {
         Canvas canvas = getCanvas();
         if(canvas!=null) {
             Bitmap bitmap = imageApi.getBitmap();
-            if (bitmap != null) {
+            if (bitmap != null && !bitmap.isRecycled()) {
                 mRectFTemp.set(dstLeft, dstTop, dstRight, dstBottom);
                 canvas.drawBitmap(bitmap, null, mRectFTemp, mPaint);
             }
@@ -255,7 +257,7 @@ public class CanvasApi {
         Canvas canvas = getCanvas();
         if(canvas!=null) {
             Bitmap bitmap = imageApi.getBitmap();
-            if (bitmap != null) {
+            if (bitmap != null && !bitmap.isRecycled()) {
                 mRectTemp.set((int)srcLeft, (int)srcTop, (int)srcRight, (int)(srcBottom));
                 mRectFTemp.set(dstLeft, dstTop, dstRight, dstBottom);
                 canvas.drawBitmap(bitmap, mRectTemp, mRectFTemp, mPaint);
