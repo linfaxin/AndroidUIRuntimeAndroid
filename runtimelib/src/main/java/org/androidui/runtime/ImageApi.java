@@ -9,7 +9,6 @@ import android.util.Base64;
 import org.androidui.runtime.image.ImageLoader;
 
 import java.io.File;
-import java.io.IOException;
 import java.io.InputStream;
 
 /**
@@ -71,7 +70,7 @@ public class ImageApi {
             }
         }
 
-        ImageLoader.getBitmapInBg(loadingUrl, new ImageLoader.BitmapLoadingListener() {
+        ImageLoader.getBitmapInBg(loadingUrl, new ImageLoader.ImageLoadingListener() {
             @Override
             public void onBitmapLoadFinish(Bitmap bitmap, String url) {
                 if(url!=null && url.equals(loadingUrl)){

@@ -8,8 +8,6 @@ import android.graphics.Bitmap.CompressFormat;
 import android.graphics.BitmapFactory;
 import android.os.AsyncTask;
 import android.os.Build;
-import android.os.Handler;
-import android.os.Looper;
 import android.support.annotation.Nullable;
 import android.support.v4.util.LruCache;
 import android.text.TextUtils;
@@ -20,11 +18,13 @@ import org.androidui.runtime.BuildConfig;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
 import java.net.URI;
 import java.util.HashSet;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -42,9 +42,6 @@ public class ImageLoader {
     static private final String DefaultCacheImgDirName = "ImageCache";//默认的图片缓存到本地的目录名
     static final private String ImgFileNameExtension = "";//本地缓存的图片的额外后缀名
 
-    private static final int DefaultLoadNetDelay = 100;
-    private static Handler LoadDelayHandler = new Handler(Looper.getMainLooper());
-
     private static int MAX_BitmapList_Size = 5 * 1024 * 1024;//最大的bitmap缓存大小
     private static int MAX_ImageByteList_Size = 2 * 1024 * 1024;//最大的bytes缓存大小
     private static int MAX_Bitmap_Width = 1080;//最大的可解析图像宽（如果大于这个值会缩放到1~1/2）
@@ -59,13 +56,7 @@ public class ImageLoader {
      */
     private static LruCache<String, byte[]> imageBytesList;
 
-    private static ConcurrentHashMap<String, LoadBitmapTask> loadingTasks = new ConcurrentHashMap<String, LoadBitmapTask>();
-
     private static boolean init = false;
-
-    static {
-        initMaxCache(MAX_BitmapList_Size, MAX_ImageByteList_Size);
-    }
 
     public static void init(Context context) {
         if (context.getExternalCacheDir() == null) return;
@@ -156,14 +147,11 @@ public class ImageLoader {
 
     private static void deleteFile(File[] files) {
         if (files == null) return;
-        File fileWillDelete = null;
         for (File f : files) {
             if (f.isDirectory()) {
                 deleteFile(f.listFiles());
             }
-            if (fileWillDelete == null) fileWillDelete = new File(f.getParentFile(), ".delete");
-            f.renameTo(fileWillDelete);
-            fileWillDelete.delete();
+            f.delete();
         }
     }
 
@@ -179,43 +167,22 @@ public class ImageLoader {
      * 异步获取图片，会立即返回。从listen中监听，listen中的方法会在当前线程执行
      */
     @Nullable
-    public static LoadBitmapTask getBitmapInBg(String url, BitmapLoadingListener listen) {
-        return getBitmapInBg(url, listen, DefaultLoadNetDelay, null);
+    public static LoadBitmapTask getBitmapInBg(String url, ImageLoadingListener listen) {
+        return getBitmapInBg(url, listen, null);
     }
 
     /**
      * 异步获取图片（如果已缓存，则同步执行）。从listen中监听，listen中的方法会在当前线程执行
-     *
-     * @param loadNetDelay 延迟这个时间再载入
      */
     @Nullable
-    private static LoadBitmapTask getBitmapInBg(String url, BitmapLoadingListener listen, int loadNetDelay, final LoadChecker checker) {
-        //先尝试同步载入缓存
-        try {
-            Bitmap bitmap = getBitmap(url, avoidNetLoadConfig);
-            if (bitmap != null) {
-                listen.onBitmapLoadFinish(bitmap, url);
-                return null;
-            }
-        } catch (Exception ignore) {
+    private static LoadBitmapTask getBitmapInBg(String url, ImageLoadingListener listen, final LoadChecker checker) {
+        //尝试异步从缓存／网络载入
+        final LoadBitmapTask task = new LoadBitmapTask(url, listen, checker);
+        if (checker == null || checker.canLoad()){
+            task.execute();
         }
-        //尝试从网络载入
-        final LoadBitmapTask task = new LoadBitmapTask(url, listen, loadNetDelay, checker);
-        LoadDelayHandler.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                if (checker == null || checker.canLoad()) task.execute();
-            }
-        }, loadNetDelay);//延迟执行，防止列表快速滚动时线程创建过多
         return task;
     }
-
-    private static LoadBitmapTask avoidNetLoadConfig = new LoadBitmapTask(null, null, 0, new LoadChecker() {
-        @Override
-        public boolean canLoad() {
-            return false;
-        }
-    });
 
     /**
      * 获取图片，会堵塞当前线程
@@ -237,7 +204,7 @@ public class ImageLoader {
      */
     @Nullable
     private static Bitmap getBitmap(String url, LoadBitmapTask task) {
-        if (url == null) {
+        if (TextUtils.isEmpty(url)) {
             return null;
         }
         try {
@@ -280,9 +247,11 @@ public class ImageLoader {
                     deleteFile(imageFile);
                     return null;
                 }
+
+            }else{
+                bitmap = scaleToMiniBitmap(bitmap);
+                bitmapList.put(url, bitmap);
             }
-            bitmap = scaleToMiniBitmap(bitmap);
-            putToBitmapList(url, bitmap);
         }
         return bitmap;
     }
@@ -296,23 +265,12 @@ public class ImageLoader {
      */
     @Nullable
     private static byte[] getFromImageBytesList(String url, LoadBitmapTask task) {
-        byte[] img_bytes = imageBytesList.get(url);//尝试从内存缓存imagebytesList中获取
-        if (img_bytes == null) {//从imagebytesList获取失败则尝试从本地(网络)获取
-            if (task != null) {
-                //先确认是否相同地址已经在载入中
-                LoadBitmapTask loadingTask = ImageLoader.loadingTasks.get(url);
-                if (loadingTask != null) {
-                    if (task == avoidNetLoadConfig) {//有个正在加载的Task，避免主线程进入getImgBytes
-                        return null;
-                    }
-                } else {
-                    ImageLoader.loadingTasks.put(url, task);
-                }
-            }
+        byte[] img_bytes = imageBytesList.get(url);//尝试从内存缓存imageBytesList中获取
+        if (img_bytes == null) {//从imageBytesList获取失败则尝试从本地(网络)获取
             img_bytes = getImgBytesInDisk(url, task);
-            putToImageBytesList(url, img_bytes);
-
-            ImageLoader.loadingTasks.remove(url);
+            if(img_bytes != null && img_bytes.length > 0){
+                imageBytesList.put(url, img_bytes);
+            }
         }
         return img_bytes;
     }
@@ -470,24 +428,6 @@ public class ImageLoader {
         return urlStr.hashCode() + "." + ImgFileNameExtension;
     }
 
-    private static void putToBitmapList(String url, Bitmap bitmap) {
-        if (!TextUtils.isEmpty(url) && bitmap != null) {
-            if (DEBUG)
-                Log.w(ImageLoader.class.getSimpleName(), bitmapList.size() + "/" + bitmapList.maxSize() +
-                        ",put size:" + bitmap.getRowBytes() * bitmap.getHeight() + ",url:" + url);
-            bitmapList.put(url, bitmap);
-        }
-    }
-
-    /**
-     * 检查缓存大小是否超出，如果超出则自动清除最早的缓存
-     */
-    private static void putToImageBytesList(String url, byte[] bytes) {
-        if (!TextUtils.isEmpty(url) && bytes != null && bytes.length > 0) {
-            imageBytesList.put(url, bytes);
-        }
-    }
-
     private static synchronized Bitmap decodeSizeLimitBitmap(File imageFile) {
         BitmapFactory.Options options = new BitmapFactory.Options();
         options.inJustDecodeBounds = true;
@@ -555,16 +495,11 @@ public class ImageLoader {
     }
 
     /**
-     * 图像载入进度的监听接口
-     *
+     * 图像载入回调接口
      * @author linfaxin
      */
-    public interface BitmapLoadingListener {
-        /**
-         * 载入结束
-         * @param bitmap 载入的最终图片（有可能是null）
-         */
-        void onBitmapLoadFinish(Bitmap bitmap, String url);
+    public interface ImageLoadingListener {
+        void onBitmapLoadFinish(@Nullable Bitmap bitmap, String url);
     }
 
     /**
@@ -576,8 +511,6 @@ public class ImageLoader {
 
     /**
      * Task类
-     * 让listener的载入结果、进度在主线程上回调
-     *
      * @author linfaxin
      */
     public static class LoadBitmapTask extends AsyncTask<Object, Object, Bitmap> {
@@ -589,29 +522,26 @@ public class ImageLoader {
             }
         };
         //5-10个线程同时下载
-        private static final Executor THREAD_POOL_EXECUTOR
-                = new ThreadPoolExecutor(5, 10, 0L, TimeUnit.MILLISECONDS, lifoQueue);
+        private static final Executor THREAD_POOL_EXECUTOR = new ThreadPoolExecutor(5, 10, 0L, TimeUnit.MILLISECONDS, lifoQueue);
 
-        HashSet<BitmapLoadingListener> listeners = new HashSet<BitmapLoadingListener>();
-        //		int delay;
+        HashSet<ImageLoadingListener> listeners = new HashSet<ImageLoadingListener>();
         LoadChecker checker;
         String url;
 
-        public LoadBitmapTask(String url, BitmapLoadingListener bitmapLoadingListener) {
+        public LoadBitmapTask(String url, ImageLoadingListener imageLoadingListener) {
             super();
             this.url = url;
-            if (bitmapLoadingListener != null) {
-                listeners.add(bitmapLoadingListener);
+            if (imageLoadingListener != null) {
+                listeners.add(imageLoadingListener);
             }
         }
 
-        public LoadBitmapTask(String url, BitmapLoadingListener bitmapLoadingListener, int delay, LoadChecker checker) {
+        public LoadBitmapTask(String url, ImageLoadingListener imageLoadingListener, LoadChecker checker) {
             super();
             this.url = url;
-            if (bitmapLoadingListener != null) {
-                listeners.add(bitmapLoadingListener);
+            if (imageLoadingListener != null) {
+                listeners.add(imageLoadingListener);
             }
-//			this.delay=delay;
             this.checker = checker;
         }
 
@@ -626,7 +556,7 @@ public class ImageLoader {
             super.onPostExecute(bitmap);
             if (checker != null && !checker.canLoad()) return;
 
-            for (BitmapLoadingListener listener : listeners) {
+            for (ImageLoadingListener listener : listeners) {
                 if (listener != null) {
                     listener.onBitmapLoadFinish(bitmap, url);
                 }
@@ -639,6 +569,47 @@ public class ImageLoader {
             else executeOnExecutor(THREAD_POOL_EXECUTOR);
             return this;
         }
+    }
 
+    /**
+     * 图片下载
+     */
+    private static class ImageDownloader {
+        private static final int DEFAULT_TIMEOUT = 8 * 1000;
+        private static final int DEFAULT_SOCKET_BUFFER_SIZE = 8192;//8K
+
+        public static File reqForDownload(String url, File file){
+            try {
+                file.getParentFile().mkdirs();
+                FileOutputStream fos = new FileOutputStream(file);
+                reqForDownload(url, fos);
+                if(Thread.currentThread().isInterrupted()) return null;
+                return file;
+
+            } catch (Exception e) {
+                if(BuildConfig.DEBUG) e.printStackTrace();
+            }
+            return null;
+        }
+
+        public static void reqForDownload(String url, OutputStream os) throws Exception{
+            HttpURLConnection connection = (HttpURLConnection) URI.create(url).toURL().openConnection();
+            connection.setConnectTimeout(DEFAULT_TIMEOUT);
+
+            InputStream is = connection.getInputStream();
+            byte[] temp=new byte[DEFAULT_SOCKET_BUFFER_SIZE];
+            int length;
+
+            try {
+                while ((length = is.read(temp)) != -1) {
+                    if(Thread.currentThread().isInterrupted()) break;
+                    os.write(temp, 0, length);
+                }
+            } finally {
+                os.close();
+                is.close();
+                connection.disconnect();
+            }
+        }
     }
 }
