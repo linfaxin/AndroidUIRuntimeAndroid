@@ -8,8 +8,8 @@ import android.graphics.Bitmap.CompressFormat;
 import android.graphics.BitmapFactory;
 import android.os.AsyncTask;
 import android.os.Build;
+import android.os.SystemClock;
 import android.support.annotation.Nullable;
-import android.support.v4.util.LruCache;
 import android.text.TextUtils;
 import android.util.Log;
 
@@ -42,19 +42,19 @@ public class ImageLoader {
     static private final String DefaultCacheImgDirName = "ImageCache";//默认的图片缓存到本地的目录名
     static final private String ImgFileNameExtension = "";//本地缓存的图片的额外后缀名
 
-    private static int MAX_BitmapList_Size = 5 * 1024 * 1024;//最大的bitmap缓存大小
-    private static int MAX_ImageByteList_Size = 2 * 1024 * 1024;//最大的bytes缓存大小
+    private static final int DefaultLoadNetDelay = 100;//100ms to load net image.
+    private static final int MAX_Image_File_Size = 2 * 1024 * 1024;//最大的图片文件大小
     private static int MAX_Bitmap_Width = 1080;//最大的可解析图像宽（如果大于这个值会缩放到1~1/2）
     private static int MAX_Bitmap_Height = 1920;//最大的可解析图像高（如果大于这个值会缩放到1~1/2）
 
     /**
      * 内容图片缓存，用来缓存之前载入过的bitmap
      */
-    private static LruCache<String, Bitmap> bitmapList;
+    private static TimeLruCache<String, Bitmap> bitmapList;
     /**
      * 内容字节缓存，用来缓存之前载入过的bitmap的字节
      */
-    private static LruCache<String, byte[]> imageBytesList;
+    private static TimeLruCache<String, byte[]> imageBytesList;
 
     private static boolean init = false;
 
@@ -101,9 +101,8 @@ public class ImageLoader {
             Log.w(ImageLoader.class.getSimpleName(), "initMax bitmapSize:" + bitmapSize + ",byteSize:" + byteSize);
         }
 
-        MAX_BitmapList_Size = bitmapSize;
         if (bitmapList != null) bitmapList.evictAll();
-        bitmapList = new LruCache<String, Bitmap>(bitmapSize) {
+        bitmapList = new TimeLruCache<String, Bitmap>(bitmapSize) {
             @Override
             protected int sizeOf(String key, Bitmap value) {
                 if (value == null){
@@ -124,9 +123,8 @@ public class ImageLoader {
                 }
             }
         };
-        MAX_ImageByteList_Size = byteSize;
         if (imageBytesList != null) imageBytesList.evictAll();
-        imageBytesList = new LruCache<String, byte[]>(byteSize) {
+        imageBytesList = new TimeLruCache<String, byte[]>(byteSize) {
             @Override
             protected int sizeOf(String key, byte[] value) {
                 if (value == null){
@@ -164,20 +162,28 @@ public class ImageLoader {
     }
 
     /**
+     * 将url对应的条目在缓存中放在头部
+     */
+    public static void notifyUrlUse(String url){
+        bitmapList.get(url);
+        imageBytesList.get(url);
+    }
+
+    /**
      * 异步获取图片，会立即返回。从listen中监听，listen中的方法会在当前线程执行
      */
     @Nullable
-    public static LoadBitmapTask getBitmapInBg(String url, ImageLoadingListener listen) {
-        return getBitmapInBg(url, listen, null);
+    public static LoadImageTask getBitmapInBg(String url, ImageLoadingListener listen) {
+        return getBitmapInBg(url, listen, DefaultLoadNetDelay, null);
     }
 
     /**
      * 异步获取图片（如果已缓存，则同步执行）。从listen中监听，listen中的方法会在当前线程执行
      */
     @Nullable
-    private static LoadBitmapTask getBitmapInBg(String url, ImageLoadingListener listen, final LoadChecker checker) {
+    private static LoadImageTask getBitmapInBg(String url, ImageLoadingListener listen, int loadNetDelay, final LoadChecker checker) {
         //尝试异步从缓存／网络载入
-        final LoadBitmapTask task = new LoadBitmapTask(url, listen, checker);
+        final LoadImageTask task = new LoadImageTask(url, listen, loadNetDelay, checker);
         if (checker == null || checker.canLoad()){
             task.execute();
         }
@@ -203,7 +209,7 @@ public class ImageLoader {
      * @return bitmap
      */
     @Nullable
-    private static Bitmap getBitmap(String url, LoadBitmapTask task) {
+    private static Bitmap getBitmap(String url, LoadImageTask task) {
         if (TextUtils.isEmpty(url)) {
             return null;
         }
@@ -225,7 +231,7 @@ public class ImageLoader {
      * @return 图片的字节数组
      */
     @Nullable
-    private static Bitmap getFromBitmapList(String url, LoadBitmapTask task) {
+    private static Bitmap getFromBitmapList(String url, LoadImageTask task) {
         Bitmap bitmap = bitmapList.get(url);
         if (bitmap == null || bitmap.isRecycled()) {//从内存图片缓存获取失败，则尝试从内存字节缓存获取
             byte[] img_bytes = getFromImageBytesList(url, task);
@@ -250,7 +256,7 @@ public class ImageLoader {
 
             }else{
                 bitmap = scaleToMiniBitmap(bitmap);
-                bitmapList.put(url, bitmap);
+                bitmapList.put(url, bitmap, task==null ? System.currentTimeMillis() : task.createTime);
             }
         }
         return bitmap;
@@ -264,12 +270,12 @@ public class ImageLoader {
      * @return 图片的字节数组
      */
     @Nullable
-    private static byte[] getFromImageBytesList(String url, LoadBitmapTask task) {
+    private static byte[] getFromImageBytesList(String url, LoadImageTask task) {
         byte[] img_bytes = imageBytesList.get(url);//尝试从内存缓存imageBytesList中获取
         if (img_bytes == null) {//从imageBytesList获取失败则尝试从本地(网络)获取
             img_bytes = getImgBytesInDisk(url, task);
             if(img_bytes != null && img_bytes.length > 0){
-                imageBytesList.put(url, img_bytes);
+                imageBytesList.put(url, img_bytes, task==null ? System.currentTimeMillis() : task.createTime);
             }
         }
         return img_bytes;
@@ -296,7 +302,7 @@ public class ImageLoader {
      * @return 图片的字节数组
      */
     @Nullable
-    private static byte[] getImgBytesInDisk(final String urlStr, final LoadBitmapTask task) {
+    private static byte[] getImgBytesInDisk(final String urlStr, final LoadImageTask task) {
         if (Thread.currentThread().isInterrupted()) return null;
 
         //尝试从本地文件获取图片
@@ -306,7 +312,7 @@ public class ImageLoader {
 
             if (imageFile != null && imageFile.length() > 0) {
                 try {
-                    if (imageFile.length() > MAX_ImageByteList_Size) {//过大的图片文件载入
+                    if (imageFile.length() > MAX_Image_File_Size) {//过大的图片文件载入
                         Bitmap limitBitmap = decodeSizeLimitBitmap(imageFile);
                         ByteArrayOutputStream baos = new ByteArrayOutputStream();
                         limitBitmap.compress(CompressFormat.JPEG, 80, baos);
@@ -321,10 +327,16 @@ public class ImageLoader {
             }
 
             //没有从本地文件获取到，那么尝试从网络获取(等待延迟的载入)
-            if (Thread.currentThread().isInterrupted()) return null;
+            if(task != null){
+                SystemClock.sleep(task.loadNetDelay);
+            }
+            if (Thread.currentThread().isInterrupted()){
+                return null;
+            }
             if (task != null && task.checker != null && !task.checker.canLoad()){
                 return null;
             }
+
             try {
                 imageFile.createNewFile();
             } catch (Exception ignored) {
@@ -356,20 +368,6 @@ public class ImageLoader {
             }
             return null;
         }
-    }
-
-    /**
-     * 下载并缓存图片，仅下载不做解析
-     */
-    public static void cacheUrlImage(String url) throws Exception {
-        final File imageFile = getImgFile(url);
-        if (cacheImgDir == null || imageFile == null) return;
-
-        if (!imageFile.exists() || imageFile.length() == 0) {
-            //缓存文件到本地
-            ImageDownloader.reqForDownload(url, imageFile);
-        }
-
     }
 
     /**
@@ -513,7 +511,7 @@ public class ImageLoader {
      * Task类
      * @author linfaxin
      */
-    public static class LoadBitmapTask extends AsyncTask<Object, Object, Bitmap> {
+    public static class LoadImageTask extends AsyncTask<Object, Object, Bitmap> {
         //后入先出队列
         private static LinkedBlockingDeque<Runnable> lifoQueue = new LinkedBlockingDeque<Runnable>() {
             @Override
@@ -527,21 +525,20 @@ public class ImageLoader {
         HashSet<ImageLoadingListener> listeners = new HashSet<ImageLoadingListener>();
         LoadChecker checker;
         String url;
+        int loadNetDelay = 0;
+        long createTime = System.currentTimeMillis();
 
-        public LoadBitmapTask(String url, ImageLoadingListener imageLoadingListener) {
-            super();
-            this.url = url;
-            if (imageLoadingListener != null) {
-                listeners.add(imageLoadingListener);
-            }
+        public LoadImageTask(String url, ImageLoadingListener imageLoadingListener) {
+            this(url, imageLoadingListener, 0, null);
         }
 
-        public LoadBitmapTask(String url, ImageLoadingListener imageLoadingListener, LoadChecker checker) {
+        public LoadImageTask(String url, ImageLoadingListener imageLoadingListener, int loadNetDelay, LoadChecker checker) {
             super();
             this.url = url;
             if (imageLoadingListener != null) {
                 listeners.add(imageLoadingListener);
             }
+            this.loadNetDelay = loadNetDelay;
             this.checker = checker;
         }
 
@@ -564,7 +561,7 @@ public class ImageLoader {
         }
 
         @SuppressLint("NewApi")
-        public LoadBitmapTask execute() {
+        public LoadImageTask execute() {
             if (Build.VERSION.SDK_INT < 11) super.execute();
             else executeOnExecutor(THREAD_POOL_EXECUTOR);
             return this;

@@ -9,26 +9,26 @@ import android.util.Base64;
 import org.androidui.runtime.image.ImageLoader;
 
 import java.io.File;
-import java.io.InputStream;
 
 /**
  * Created by linfaxin on 15/12/15.
  *
  */
 public class ImageApi {
-    private static final String URL_ASSETS_PRE = "file:///android_asset/";
     private static final String URL_BASE64PNG_PRE = "data:image/png;base64,";
     private static final String URL_BASE64JPG_PRE = "data:image/jpg;base64,";
     private static final String URL_BASE64GIF_PRE = "data:image/gif;base64,";
 
     static void initImageLoader(Context context, boolean d){
         File imgDir = new File(context.getExternalCacheDir(), "AndroidUIRuntime/.img/");
-        imgDir.mkdirs();
+        ImageLoader.DEBUG = d;
         ImageLoader.init(context, imgDir);
     }
 
     private Bitmap bitmap;
+    private String bitmapUrl;
     private String loadingUrl;
+    private ImageLoader.LoadImageTask loadingTask;
     private RuntimeBridge bridge;
 
     public ImageApi(RuntimeBridge bridge) {
@@ -48,42 +48,31 @@ public class ImageApi {
             String base64 = loadingUrl.substring(URL_BASE64PNG_PRE.length());
             byte[] bitmapArray = Base64.decode(base64, Base64.DEFAULT);
             Bitmap bitmap = BitmapFactory.decodeByteArray(bitmapArray, 0, bitmapArray.length);
-            onImageLoadFinish(bitmap, true);
+            onImageLoadFinish(loadingUrl, bitmap, true);
             return;
         }
         if(loadingUrl.startsWith(URL_BASE64JPG_PRE) || loadingUrl.startsWith(URL_BASE64GIF_PRE)){
             String base64 = loadingUrl.substring(URL_BASE64JPG_PRE.length());
             byte[] bitmapArray = Base64.decode(base64, Base64.DEFAULT);
             Bitmap bitmap = BitmapFactory.decodeByteArray(bitmapArray, 0, bitmapArray.length);
-            onImageLoadFinish(bitmap);
+            onImageLoadFinish(loadingUrl, bitmap);
             return;
         }
 
-        //synchronous if file assets
-        if(loadingUrl.startsWith(URL_ASSETS_PRE)){
-            String assetsPath = loadingUrl.substring(URL_ASSETS_PRE.length());
-            try {
-                InputStream is = bridge.getWebView().getContext().getAssets().open(assetsPath);
-                onImageLoadFinish(BitmapFactory.decodeStream(is), assetsPath.endsWith(".9.png"));
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-
-        ImageLoader.getBitmapInBg(loadingUrl, new ImageLoader.ImageLoadingListener() {
+        if(loadingTask!=null) loadingTask.cancel(true);
+        loadingTask = ImageLoader.getBitmapInBg(loadingUrl, new ImageLoader.ImageLoadingListener() {
             @Override
             public void onBitmapLoadFinish(Bitmap bitmap, String url) {
-                if(url!=null && url.equals(loadingUrl)){
-                    onImageLoadFinish(bitmap);
-                }
+                onImageLoadFinish(url, bitmap);
             }
         });
     }
 
-    private void onImageLoadFinish(Bitmap bitmap){
-        onImageLoadFinish(bitmap, false);
+    private void onImageLoadFinish(String url, Bitmap bitmap){
+        onImageLoadFinish(url, bitmap, false);
     }
-    private void onImageLoadFinish(Bitmap bitmap, boolean parseBorder){
+    private void onImageLoadFinish(String url, Bitmap bitmap, boolean parseBorder){
+        if(url == null || !url.equals(loadingUrl)) return;
         if(bitmap!=null){
             if(parseBorder){
                 int width = bitmap.getWidth();
@@ -108,6 +97,7 @@ public class ImageApi {
             this.bitmap.recycle();
         }
         this.bitmap = bitmap;
+        this.bitmapUrl = url;
     }
 
     public void recycle(){
@@ -116,12 +106,14 @@ public class ImageApi {
     }
 
     public Bitmap getBitmap() {
-        if(bitmap!=null && bitmap.isRecycled()){
+        if(bitmap!=null && bitmap.isRecycled() && TextUtils.equals(bitmapUrl, loadingUrl)){
             loadImageImpl();
         }
-
         if(bitmap!=null && bitmap.isRecycled()){
             return null;
+        }
+        if(!TextUtils.isEmpty(bitmapUrl)){
+            ImageLoader.notifyUrlUse(bitmapUrl);
         }
         return bitmap;
     }
