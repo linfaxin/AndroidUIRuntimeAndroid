@@ -105,7 +105,7 @@ public class ImageLoader {
         bitmapList = new TimeLruCache<String, Bitmap>(bitmapSize) {
             @Override
             protected int sizeOf(String key, Bitmap value) {
-                if (value == null){
+                if (value == null || value.isRecycled()){
                     return 0;
                 }
                 if (Build.VERSION.SDK_INT >= 19){

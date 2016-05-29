@@ -93,15 +93,18 @@ public class ImageApi {
         }else{
             bridge.notifyImageLoadError(ImageApi.this);
         }
-        if(this.bitmap!=null){
-            this.bitmap.recycle();
-        }
+//        if(this.bitmap!=null){
+//            this.bitmap.recycle();
+//        }
         this.bitmap = bitmap;
         this.bitmapUrl = url;
     }
 
     public void recycle(){
-        if(bitmap!=null) bitmap.recycle();
+        //not recycle here, ImageLoader will manager them.
+//        if(bitmap!=null){
+//            bitmap.recycle();
+//        }
 
     }
 
