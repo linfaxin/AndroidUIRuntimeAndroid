@@ -5,8 +5,6 @@ import android.support.v4.view.ViewCompat;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebView;
 
-import java.util.Vector;
-
 
 /**
  * Created by linfaxin on 15/12/15.
@@ -23,7 +21,7 @@ public class RuntimeBridgeHW extends RuntimeBridge{
     public void batchCall(final String batchString){
         final SurfaceApiHW surfaceApi = (SurfaceApiHW) surfaceInstances.valueAt(0);
         if(surfaceApi!=null){
-            BatchCallHelper.BatchCallParseResult result = BatchCallHelper.parse(this, batchString);
+            BatchCallHelper.BatchCallResult result = BatchCallHelper.BatchCallResult.obtain(this, batchString);
             pendingBatchResult.add(result);
             surfaceApi.postOnDraw(queryPendingAndRun);
         }

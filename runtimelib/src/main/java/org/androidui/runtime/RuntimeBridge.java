@@ -168,13 +168,13 @@ public class RuntimeBridge {
         }
     }
 
-    protected Vector<BatchCallHelper.BatchCallParseResult> pendingBatchResult = new Vector<>();
-    private BatchCallHelper.BatchCallParseResult currentBatchRun;
+    protected Vector<BatchCallHelper.BatchCallResult> pendingBatchResult = new Vector<>();
+    private BatchCallHelper.BatchCallResult currentBatchRun;
     protected Runnable queryPendingAndRun = new Runnable() {
         @Override
         public void run() {
             int size = pendingBatchResult.size();
-            BatchCallHelper.BatchCallParseResult willCallBatchRun;
+            BatchCallHelper.BatchCallResult willCallBatchRun;
 
             if(size==0){//no new draw batch call, draw last.
                 willCallBatchRun = currentBatchRun;
@@ -184,7 +184,7 @@ public class RuntimeBridge {
 
             }else{
                 while(true){
-                    BatchCallHelper.BatchCallParseResult call = pendingBatchResult.remove(0);
+                    BatchCallHelper.BatchCallResult call = pendingBatchResult.remove(0);
                     if(pendingBatchResult.size() == 0 || BatchCallHelper.cantSkipBatchCall(call)) {
                         willCallBatchRun = call;
                         break;
@@ -205,7 +205,7 @@ public class RuntimeBridge {
     public void batchCall(final String batchString){
         final View webView = getWebView();
         if(webView!=null){
-            BatchCallHelper.BatchCallParseResult result = BatchCallHelper.parse(this, batchString);
+            BatchCallHelper.BatchCallResult result = BatchCallHelper.parse(this, batchString);
             pendingBatchResult.add(result);
             webView.removeCallbacks(queryPendingAndRun);
             ViewCompat.postOnAnimation(webView, queryPendingAndRun);

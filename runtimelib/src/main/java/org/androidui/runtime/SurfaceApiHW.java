@@ -16,6 +16,8 @@ import android.webkit.WebView;
 public class SurfaceApiHW extends SurfaceApi{
     private CanvasApi drawingCanvas = new CanvasApi(null);
     private Runnable postOnDrawRun;
+    private static final int MaxAutoRedrawFlag = 10;
+    private int autoRedrawFlag = 0;
 
     public SurfaceApiHW(Context context, RuntimeBridge runtimeBridge) {
         super(context, runtimeBridge);
@@ -36,10 +38,13 @@ public class SurfaceApiHW extends SurfaceApi{
 
     public void postOnDraw(Runnable run){
         postOnDrawRun = run;
-        View drawView = getSurfaceView();
-        if(drawView!=null){
-            ViewCompat.postInvalidateOnAnimation(drawView);
+        if(autoRedrawFlag > MaxAutoRedrawFlag){
+            View drawView = getSurfaceView();
+            if(drawView!=null){
+                ViewCompat.postInvalidateOnAnimation(drawView);
+            }
         }
+        autoRedrawFlag = 0;
     }
 
     //draw on this view, use HW canvas to draw
@@ -59,6 +64,11 @@ public class SurfaceApiHW extends SurfaceApi{
             skipDrawFlag = true;
             runtimeBridge.drawHTMLBoundToCanvas(canvas);
             skipDrawFlag = false;
+
+
+            if(autoRedrawFlag++ < MaxAutoRedrawFlag){
+                ViewCompat.postInvalidateOnAnimation(this);
+            }
         }
     }
 }

@@ -3,19 +3,14 @@ package org.androidui.runtime;
 import android.support.v4.util.Pools;
 import android.util.Log;
 
-import java.io.BufferedReader;
-import java.io.StringReader;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.lang.reflect.Method;
-import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 /**
  * Created by linfaxin on 16/4/3.
@@ -45,7 +40,7 @@ public class BatchCallHelper {
         }
     }
 
-    public static boolean cantSkipBatchCall(BatchCallHelper.BatchCallParseResult batchResult){
+    public static boolean cantSkipBatchCall(BatchCallResult batchResult){
         return cantSkipBatchCall(batchResult.batchCallString);
     }
     public static boolean cantSkipBatchCall(String batchCallString){
@@ -55,10 +50,14 @@ public class BatchCallHelper {
         return false;
     }
 
-    public static BatchCallParseResult parse(RuntimeBridge runtimeBridge, String batchCallString){
-        try {
-            BatchCallParseResult batchCallParseResult = BatchCallParseResult.obtain(runtimeBridge, batchCallString);
+    public static BatchCallResult parse(RuntimeBridge runtimeBridge, String batchCallString){
+        return BatchCallResult.obtain(runtimeBridge, batchCallString, true);
+    }
 
+    private static void parse(BatchCallResult batchCallResult){
+        try {
+            if(batchCallResult.parsed) return;
+            String batchCallString = batchCallResult.batchCallString;
             int methodEndIndex = 2;//call.indexOf("["); //all method name now 10 - 99
             String methodName = null;
             Method method;
@@ -85,7 +84,7 @@ public class BatchCallHelper {
                     if(method==null){
                         throw new RuntimeException("not found method: "+ methodName);
                     }
-                    batchCallParseResult.add(method, args);
+                    batchCallResult.add(method, args);
                     methodName = null;
 
                 } else {
@@ -118,15 +117,14 @@ public class BatchCallHelper {
                 }
             }
 
+            batchCallResult.parsed = true;
             if (DEBUG_BATCH_CALL_TIME){
                 Log.d(TAG, "parse batch call time use :" + (System.nanoTime()-parseStart) / 1000000f + "ms");
             }
-            return batchCallParseResult;
 
         } catch (Exception e) {
             e.printStackTrace();
         }
-        return null;
     }
 
 
@@ -153,14 +151,15 @@ public class BatchCallHelper {
         return sign * num;
     }
 
-    private static Pools.SynchronizedPool<BatchCallParseResult> BatchCallParseResultPools = new Pools.SynchronizedPool<>(20);
-    public static class BatchCallParseResult implements Runnable{
+    private static Pools.SynchronizedPool<BatchCallResult> BatchCallParseResultPools = new Pools.SynchronizedPool<>(20);
+    public static class BatchCallResult implements Runnable{
         ArrayList<Method> methodList = new ArrayList<>();
         ArrayList<Object[]> argsList = new ArrayList<>();
         RuntimeBridge runtimeBridge;
         String batchCallString;
+        boolean parsed = false;
 
-        private BatchCallParseResult() {
+        private BatchCallResult() {
         }
 
         public void add(Method m, Object[] args){
@@ -170,6 +169,10 @@ public class BatchCallHelper {
 
         @Override
         public void run() {
+            if(!this.parsed){
+                BatchCallHelper.parse(this);
+            }
+
             long invokeUse = 0;
             long invokeStart = System.nanoTime();
 
@@ -194,20 +197,29 @@ public class BatchCallHelper {
             runtimeBridge.trackFPS();
         }
 
-        public static BatchCallParseResult obtain(RuntimeBridge runtimeBridge, String batchCallString){
-            BatchCallParseResult batchCallParseResult = BatchCallParseResultPools.acquire();
-            if(batchCallParseResult==null){
-                batchCallParseResult = new BatchCallParseResult();
+        public static BatchCallResult obtain(RuntimeBridge runtimeBridge, String batchCallString){
+            return obtain(runtimeBridge, batchCallString, false);
+        }
+        public static BatchCallResult obtain(RuntimeBridge runtimeBridge, String batchCallString, boolean parseNow){
+            BatchCallResult batchCallResult = BatchCallParseResultPools.acquire();
+            if(batchCallResult ==null){
+                batchCallResult = new BatchCallResult();
             }
-            batchCallParseResult.runtimeBridge = runtimeBridge;
-            batchCallParseResult.batchCallString = batchCallString;
-            return batchCallParseResult;
+            batchCallResult.runtimeBridge = runtimeBridge;
+            batchCallResult.batchCallString = batchCallString;
+            batchCallResult.parsed = false;
+
+            if(parseNow){
+                BatchCallHelper.parse(batchCallResult);
+            }
+            return batchCallResult;
         }
         public void recycle(){
             methodList.clear();
             argsList.clear();
             this.runtimeBridge = null;
             this.batchCallString = null;
+            this.parsed = false;
             BatchCallParseResultPools.release(this);
         }
     }
