@@ -4,6 +4,15 @@ android {
     compileSdkVersion 22
     buildToolsVersion "22.0.1"
 
+    signingConfigs {
+        debugKey {
+            storeFile file('debug.keystore')
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+            storePassword 'android'
+        }
+    }
+
     defaultConfig {
         applicationId "org.androidui.runtime.sample"
         minSdkVersion 14
@@ -15,6 +24,11 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+        debug {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.debugKey
         }
     }
 }
