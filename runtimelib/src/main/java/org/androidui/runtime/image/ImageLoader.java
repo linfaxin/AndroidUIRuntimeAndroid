@@ -119,7 +119,7 @@ public class ImageLoader {
                 super.entryRemoved(evicted, key, oldValue, newValue);
                 if (DEBUG) Log.w(ImageLoader.class.getSimpleName(), "recycle bitmap:" + key);
                 if (oldValue != null){
-                    oldValue.recycle();
+                    recycle(oldValue);
                 }
             }
         };
@@ -452,12 +452,12 @@ public class ImageLoader {
         return BitmapFactory.decodeByteArray(img_bytes, 0, img_bytes.length, options);
     }
 
-    private static synchronized Bitmap scaleToMiniBitmap(Bitmap in) {
+    private static Bitmap scaleToMiniBitmap(Bitmap in) {
         return scaleToMiniBitmap(in, MAX_Bitmap_Width, MAX_Bitmap_Height);
     }
 
     //将图片控制在限定高宽之内
-    public static Bitmap scaleToMiniBitmap(Bitmap in, int widthLimit, int heightLimit) {
+    public static synchronized Bitmap scaleToMiniBitmap(Bitmap in, int widthLimit, int heightLimit) {
         int inWidth = in.getWidth();
         int inHeight = in.getHeight();
         if (inWidth <= widthLimit && inHeight <= heightLimit) return in;
@@ -465,6 +465,10 @@ public class ImageLoader {
         Bitmap re = Bitmap.createScaledBitmap(in, (int) (inWidth * scale), (int) (inHeight * scale), true);
         in.recycle();
         return re;
+    }
+
+    public static synchronized void recycle(Bitmap bitmap){
+        if(bitmap!=null) bitmap.recycle();
     }
 
     /**

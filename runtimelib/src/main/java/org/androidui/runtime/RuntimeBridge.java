@@ -134,6 +134,7 @@ public class RuntimeBridge {
     private int mFpsNumFrames = 0;
     private TextView mFPSShowText;
     protected void trackFPS(){
+        if(!DEBUG_TRACK_FPS) return;
         long nowTime = System.currentTimeMillis();
         if (this.mFpsStartTime < 0) {
             this.mFpsStartTime = this.mFpsPrevTime = nowTime;
@@ -181,6 +182,7 @@ public class RuntimeBridge {
 
             } else if(size==1){
                 willCallBatchRun = pendingBatchResult.remove(0);
+                trackFPS();
 
             }else{
                 while(true){
@@ -191,6 +193,7 @@ public class RuntimeBridge {
                     }
                     call.recycle();
                 }
+                trackFPS();
             }
 
             if(currentBatchRun!=null && currentBatchRun!=willCallBatchRun){

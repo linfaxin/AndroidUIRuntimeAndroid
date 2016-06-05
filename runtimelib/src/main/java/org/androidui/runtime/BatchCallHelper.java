@@ -194,7 +194,6 @@ public class BatchCallHelper {
             if (DEBUG_BATCH_CALL_TIME){
                 Log.d(TAG, "invokeUse batch call time use :" + invokeUse / 1000000f + "ms");
             }
-            runtimeBridge.trackFPS();
         }
 
         public static BatchCallResult obtain(RuntimeBridge runtimeBridge, String batchCallString){
