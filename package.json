@@ -1,0 +1,29 @@
+{
+  "name": "androidui-webapp-runtime-cordova",
+  "version": "1.0.1",
+  "description": "AndroidUI-WebApp Runtime for Cordova",
+  "cordova": {
+    "id": "org.androidui.cordova.runtime",
+    "platforms": [
+      "android"
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/linfaxin/AndroidUIRuntimeAndroid.git"
+  },
+  "keywords": [
+    "cordova",
+    "androidui",
+    "spa",
+    "webapp",
+    "ecosystem:cordova",
+    "cordova-android"
+  ],
+  "author": "linfaxin",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/linfaxin/AndroidUIRuntimeAndroid/issues"
+  },
+  "homepage": "https://github.com/linfaxin/AndroidUIRuntimeAndroid#readme"
+}

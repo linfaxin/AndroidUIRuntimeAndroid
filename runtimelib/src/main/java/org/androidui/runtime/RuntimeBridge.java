@@ -32,22 +32,22 @@ import java.util.Vector;
  */
 public class RuntimeBridge {
     protected final static String TAG = "RuntimeBridge";
-    protected final static boolean DEBUG = false;
-    protected final static boolean DEBUG_RUNJS = false;
-    protected final static boolean DEBUG_WEBVIEW = false;
+    public static boolean DEBUG = false;
+    public static boolean DEBUG_RUNJS = false;
+    public static boolean DEBUG_WEBVIEW = false;
     public static boolean DEBUG_TRACK_FPS = false;
 
-    protected SparseArray<SurfaceApi> surfaceInstances = new SparseArray<>();
-    private SparseArray<CanvasApi> canvasInstances = new SparseArray<>();
-    SparseArray<ImageApi> imageInstances = new SparseArray<>();
-    private SparseArray<WebView> webViewInstances = new SparseArray<>();
-    private SparseArray<Rect> drawHTMLBounds = new SparseArray<>();
+    protected SparseArray<SurfaceApi> surfaceInstances = new SparseArray<SurfaceApi>();
+    private SparseArray<CanvasApi> canvasInstances = new SparseArray<CanvasApi>();
+    SparseArray<ImageApi> imageInstances = new SparseArray<ImageApi>();
+    private SparseArray<WebView> webViewInstances = new SparseArray<WebView>();
+    private SparseArray<Rect> drawHTMLBounds = new SparseArray<Rect>();
     private Rect mRectTmp = new Rect();
 
     private WeakReference<WebView> webViewRef;
 
     protected RuntimeBridge(WebView webView) {
-        this.webViewRef = new WeakReference<>(webView);
+        this.webViewRef = new WeakReference<WebView>(webView);
         webView.getSettings().setJavaScriptEnabled(true);
         webView.addJavascriptInterface(this, "AndroidUIRuntime");
     }
@@ -169,7 +169,7 @@ public class RuntimeBridge {
         }
     }
 
-    protected Vector<BatchCallHelper.BatchCallResult> pendingBatchResult = new Vector<>();
+    protected Vector<BatchCallHelper.BatchCallResult> pendingBatchResult = new Vector<BatchCallHelper.BatchCallResult>();
     private BatchCallHelper.BatchCallResult currentBatchRun;
     protected Runnable queryPendingAndRun = new Runnable() {
         @Override

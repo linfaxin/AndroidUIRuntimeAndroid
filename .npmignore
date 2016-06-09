@@ -1,0 +1,10 @@
+.idea
+.DS_Store
+*.iml
+app/
+gradle/
+gradle.properties
+gradlew
+gradlew.bat
+import-summary.txt
+settings.gradle

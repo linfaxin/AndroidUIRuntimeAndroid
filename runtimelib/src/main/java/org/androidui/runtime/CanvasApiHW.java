@@ -10,7 +10,7 @@ import java.util.ArrayList;
  */
 public class CanvasApiHW extends CanvasApi{
     private int width, height;
-    private ArrayList<Runnable> drawRecords = new ArrayList<>();
+    private ArrayList<Runnable> drawRecords = new ArrayList<Runnable>();
 
     public CanvasApiHW(int width, int height) {
         super(null);

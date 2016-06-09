@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<plugin xmlns="http://cordova.apache.org/ns/plugins/1.0"
+        id="androidui-webapp-runtime-cordova"
+        version="1.0.1">
+    <name>AndroidUIRuntime</name>
+    <description>AndroidUI-WebApp Runtime for Cordova</description>
+    <license>MIT</license>
+    <keywords>cordova,androidui,spa,webapp</keywords>
+
+    <!-- android -->
+    <platform name="android">
+        <config-file target="res/xml/config.xml" parent="/*">
+            <feature name="AndroidUIRuntime" >
+                <param name="android-package" value="org.androidui.runtime.cordova.CordovaPluginFile"/>
+                <param name="onload" value="true" />
+            </feature>
+        </config-file>
+
+        <source-file src="runtimelib/cordova/CordovaPluginFile.java" target-dir="src/org/androidui/runtime/cordova" />
+        <source-file src="runtimelib/src/main/java/org/androidui/runtime/image/ImageLoader.java" target-dir="src/org/androidui/runtime/image" />
+        <source-file src="runtimelib/src/main/java/org/androidui/runtime/image/TimeLruCache.java" target-dir="src/org/androidui/runtime/image" />
+        <source-file src="runtimelib/src/main/java/org/androidui/runtime/BatchCallHelper.java" target-dir="src/org/androidui/runtime" />
+        <source-file src="runtimelib/src/main/java/org/androidui/runtime/CanvasApi.java" target-dir="src/org/androidui/runtime" />
+        <source-file src="runtimelib/src/main/java/org/androidui/runtime/CanvasApiHW.java" target-dir="src/org/androidui/runtime" />
+        <source-file src="runtimelib/src/main/java/org/androidui/runtime/ImageApi.java" target-dir="src/org/androidui/runtime" />
+        <source-file src="runtimelib/src/main/java/org/androidui/runtime/RuntimeBridge.java" target-dir="src/org/androidui/runtime" />
+        <source-file src="runtimelib/src/main/java/org/androidui/runtime/RuntimeBridgeHW.java" target-dir="src/org/androidui/runtime" />
+        <source-file src="runtimelib/src/main/java/org/androidui/runtime/RuntimeInit.java" target-dir="src/org/androidui/runtime" />
+        <source-file src="runtimelib/src/main/java/org/androidui/runtime/SurfaceApi.java" target-dir="src/org/androidui/runtime" />
+        <source-file src="runtimelib/src/main/java/org/androidui/runtime/SurfaceApiHW.java" target-dir="src/org/androidui/runtime" />
+
+        <!-- Depend on v22 of support-v4 support library -->
+        <framework src="com.android.support:support-v4:22.2.1" />
+    </platform>
+</plugin>

@@ -24,8 +24,8 @@ public class BatchCallHelper {
     private static final char ARG_BOOLEAN_TRUE = 't';
     private static final char ARG_BOOLEAN_STRING = '"';
 
-    private static HashMap<String, Method> batchCallMethodCache = new HashMap<>();
-    private static ArrayList<String> CantSkipMethodNames = new ArrayList<>();
+    private static HashMap<String, Method> batchCallMethodCache = new HashMap<String, Method>();
+    private static ArrayList<String> CantSkipMethodNames = new ArrayList<String>();
 
     public static void initBatchMethodCache(){
         Class<RuntimeBridge> c = RuntimeBridge.class;
@@ -63,7 +63,7 @@ public class BatchCallHelper {
             Method method;
             long longValue;
             char tmpChar;
-            ArrayList<Object> argList = new ArrayList<>();
+            ArrayList<Object> argList = new ArrayList<Object>();
 
             long parseStart = System.nanoTime();
 
@@ -151,10 +151,10 @@ public class BatchCallHelper {
         return sign * num;
     }
 
-    private static Pools.SynchronizedPool<BatchCallResult> BatchCallParseResultPools = new Pools.SynchronizedPool<>(20);
+    private static Pools.SynchronizedPool<BatchCallResult> BatchCallParseResultPools = new Pools.SynchronizedPool<BatchCallResult>(20);
     public static class BatchCallResult implements Runnable{
-        ArrayList<Method> methodList = new ArrayList<>();
-        ArrayList<Object[]> argsList = new ArrayList<>();
+        ArrayList<Method> methodList = new ArrayList<Method>();
+        ArrayList<Object[]> argsList = new ArrayList<Object[]>();
         RuntimeBridge runtimeBridge;
         String batchCallString;
         boolean parsed = false;

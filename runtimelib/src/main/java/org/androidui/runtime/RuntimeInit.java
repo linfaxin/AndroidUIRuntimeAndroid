@@ -31,7 +31,7 @@ public class RuntimeInit {
         }
     }
 
-    protected static WeakHashMap<ViewGroup, RuntimeBridge> weakInstanceMap = new WeakHashMap<>();
+    protected static WeakHashMap<ViewGroup, RuntimeBridge> weakInstanceMap = new WeakHashMap<ViewGroup, RuntimeBridge>();
     public static RuntimeBridge initWebView(WebView webView){
         init(webView.getContext().getApplicationContext());
 

@@ -12,9 +12,6 @@ import android.os.SystemClock;
 import android.support.annotation.Nullable;
 import android.text.TextUtils;
 import android.util.Log;
-
-import org.androidui.runtime.BuildConfig;
-
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -37,7 +34,7 @@ import java.util.concurrent.TimeUnit;
  * @author linlinfaxin@163.com
  */
 public class ImageLoader {
-    public static boolean DEBUG = BuildConfig.DEBUG;
+    public static boolean DEBUG = false;
     static private File cacheImgDir;//图片缓存到本地的目录
     static private final String DefaultCacheImgDirName = "ImageCache";//默认的图片缓存到本地的目录名
     static final private String ImgFileNameExtension = "";//本地缓存的图片的额外后缀名
@@ -588,7 +585,7 @@ public class ImageLoader {
                 return file;
 
             } catch (Exception e) {
-                if(BuildConfig.DEBUG) e.printStackTrace();
+                if(DEBUG) e.printStackTrace();
             }
             return null;
         }

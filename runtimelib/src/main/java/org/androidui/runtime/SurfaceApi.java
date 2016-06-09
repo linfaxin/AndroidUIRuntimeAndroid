@@ -24,7 +24,7 @@ public class SurfaceApi implements SurfaceHolder.Callback {
 
     public SurfaceApi(Context context, RuntimeBridge runtimeBridge){
         View surfaceView = createSurfaceView(context);
-        this.surfaceRef = new WeakReference<>(surfaceView);
+        this.surfaceRef = new WeakReference<View>(surfaceView);
         this.runtimeBridge = runtimeBridge;
     }
 

@@ -24,13 +24,13 @@ import java.util.ArrayDeque;
  */
 public class CanvasApi {
     private static String TAG = "CanvasApi";
-    private static boolean DEBUG = false;
+    public static boolean DEBUG = false;
     private static Paint clearPaint = new Paint();
     static {
         clearPaint.setColor(Color.WHITE);
         clearPaint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.CLEAR));
     }
-    private static Pools.Pool<CanvasPaint> sPaintPool = new Pools.SynchronizedPool<>(30);
+    private static Pools.Pool<CanvasPaint> sPaintPool = new Pools.SynchronizedPool<CanvasPaint>(30);
     private static CanvasPaint obtainPaint(){
         CanvasPaint paint = sPaintPool.acquire();
         if(paint==null) return new CanvasPaint();
@@ -47,7 +47,7 @@ public class CanvasApi {
     private Path mPathTemp = new Path();
     protected Matrix mTempMatrix = new Matrix();
     protected final float[] mTempValue = new float[9];
-    private ArrayDeque<CanvasPaint> savedPaints = new ArrayDeque<>();
+    private ArrayDeque<CanvasPaint> savedPaints = new ArrayDeque<CanvasPaint>();
     protected CanvasPaint mPaint;
 
     public CanvasApi(@Nullable Canvas canvas) {

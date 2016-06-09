@@ -48,7 +48,7 @@ public class TimeLruCache<K, V> {
         }
         this.maxSize = maxSize;
         this.map = new LinkedHashMap<K, V>(0, 0.75f, true);
-        this.keyTimeMap = new WeakHashMap<>();
+        this.keyTimeMap = new WeakHashMap<K, Long>();
     }
 
     /**
