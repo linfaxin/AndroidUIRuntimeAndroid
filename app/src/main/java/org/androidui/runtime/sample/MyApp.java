@@ -17,7 +17,7 @@ public class MyApp extends Application{
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
             WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG);
         }
-        RuntimeBridge.DEBUG_TRACK_FPS = true;
+        ShowFPSHelper.DEBUG_TRACK_FPS = true;
         BatchCallHelper.DEBUG_BATCH_CALL_TIME = false;
     }
 }

@@ -4,7 +4,6 @@ import android.app.Activity;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
-import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.os.Build;
@@ -20,7 +19,6 @@ import android.webkit.WebBackForwardList;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.AbsoluteLayout;
-import android.widget.TextView;
 
 import java.lang.ref.WeakReference;
 import java.util.Arrays;
@@ -35,7 +33,6 @@ public class RuntimeBridge {
     public static boolean DEBUG = false;
     public static boolean DEBUG_RUNJS = false;
     public static boolean DEBUG_WEBVIEW = false;
-    public static boolean DEBUG_TRACK_FPS = false;
 
     protected SparseArray<SurfaceApi> surfaceInstances = new SparseArray<SurfaceApi>();
     private SparseArray<CanvasApi> canvasInstances = new SparseArray<CanvasApi>();
@@ -43,11 +40,13 @@ public class RuntimeBridge {
     private SparseArray<WebView> webViewInstances = new SparseArray<WebView>();
     private SparseArray<Rect> drawHTMLBounds = new SparseArray<Rect>();
     private Rect mRectTmp = new Rect();
+    private ShowFPSHelper showFPSHelper;
 
     private WeakReference<WebView> webViewRef;
 
     protected RuntimeBridge(WebView webView) {
         this.webViewRef = new WeakReference<WebView>(webView);
+        showFPSHelper = new ShowFPSHelper(webView);
         webView.getSettings().setJavaScriptEnabled(true);
         webView.addJavascriptInterface(this, "AndroidUIRuntime");
     }
@@ -129,44 +128,8 @@ public class RuntimeBridge {
         }
     }
 
-    private long mFpsStartTime = -1;
-    private long mFpsPrevTime = -1;
-    private int mFpsNumFrames = 0;
-    private TextView mFPSShowText;
-    protected void trackFPS(){
-        if(!DEBUG_TRACK_FPS) return;
-        long nowTime = System.currentTimeMillis();
-        if (this.mFpsStartTime < 0) {
-            this.mFpsStartTime = this.mFpsPrevTime = nowTime;
-            this.mFpsNumFrames = 0;
-        } else {
-            this.mFpsNumFrames++;
-//            long frameTime = nowTime - this.mFpsPrevTime;
-            long totalTime = nowTime - this.mFpsStartTime;
-            //Log.v(ViewRootImpl.TAG, "Frame time:\t" + frameTime);
-            this.mFpsPrevTime = nowTime;
-            if (totalTime > 1000) {
-                long fps = this.mFpsNumFrames * 1000 / totalTime;
-                Log.d("trachFPS", "FPS:\t" + fps);
-                WebView webView = getWebView();
-                if( (mFPSShowText==null || mFPSShowText.getParent()==null) && webView!=null){
-                    Context context = webView.getContext();
-                    mFPSShowText = new TextView(context);
-                    mFPSShowText.setBackgroundColor(Color.BLACK);
-                    mFPSShowText.setTextColor(Color.WHITE);
-                    mFPSShowText.setAlpha(0.7f);
-                    ViewGroup.LayoutParams layoutParams = new ViewGroup.LayoutParams((int) (48 * context.getResources().getDisplayMetrics().density), -2);
-                    webView.addView(mFPSShowText, layoutParams);
-                }
-                if(mFPSShowText!=null){
-                    if(mFPSShowText.getVisibility()!=View.VISIBLE) mFPSShowText.setVisibility(View.VISIBLE);
-                    mFPSShowText.setText("FPS:"+(int)fps);
-                }
-
-                this.mFpsStartTime = nowTime;
-                this.mFpsNumFrames = 0;
-            }
-        }
+    protected void trackUIFPS(){
+        showFPSHelper.trackUIFPS();
     }
 
     protected Vector<BatchCallHelper.BatchCallResult> pendingBatchResult = new Vector<BatchCallHelper.BatchCallResult>();
@@ -182,7 +145,7 @@ public class RuntimeBridge {
 
             } else if(size==1){
                 willCallBatchRun = pendingBatchResult.remove(0);
-                trackFPS();
+                trackUIFPS();
 
             }else{
                 while(true){
@@ -193,7 +156,7 @@ public class RuntimeBridge {
                     }
                     call.recycle();
                 }
-                trackFPS();
+                trackUIFPS();
             }
 
             if(currentBatchRun!=null && currentBatchRun!=willCallBatchRun){
@@ -215,6 +178,10 @@ public class RuntimeBridge {
         }
     }
 
+    @JavascriptInterface
+    public void showJSFps(float fps){
+        showFPSHelper.showJSFPS(fps);
+    }
 
     private Runnable allViewInvisibleRun = new Runnable() {
         @Override
@@ -259,7 +226,6 @@ public class RuntimeBridge {
                 public void run() {
                     webView.removeAllViews();
                     drawHTMLBounds.clear();
-                    mFPSShowText = null;
                     surfaceInstances.clear();
                     webViewInstances.clear();
 
