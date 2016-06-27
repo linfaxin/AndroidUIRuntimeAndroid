@@ -3,16 +3,14 @@ package org.androidui.runtime;
 import android.content.Context;
 import android.graphics.Color;
 import android.util.Log;
-import android.view.View;
 import android.view.ViewGroup;
-import android.webkit.WebView;
 import android.widget.TextView;
 
 /**
  * Created by linfaxin on 16/6/27.
  */
 public class ShowFPSHelper {
-    public static boolean DEBUG_TRACK_FPS = false;
+    public static boolean DEBUG_TRACK_UIFPS = false;
 
     ViewGroup viewGroup;
 
@@ -29,12 +27,12 @@ public class ShowFPSHelper {
     }
 
     public void showJSFPS(float fps){
-        DEBUG_TRACK_FPS = true;
+        DEBUG_TRACK_UIFPS = true;
         mJSFPS = (int) fps;
     }
 
     public void trackUIFPS(){
-        if(!DEBUG_TRACK_FPS) return;
+        if(!DEBUG_TRACK_UIFPS) return;
         long nowTime = System.currentTimeMillis();
         if (this.mFpsStartTime < 0) {
             this.mFpsStartTime = this.mFpsPrevTime = nowTime;

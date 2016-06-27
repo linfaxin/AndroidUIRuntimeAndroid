@@ -128,10 +128,6 @@ public class RuntimeBridge {
         }
     }
 
-    protected void trackUIFPS(){
-        showFPSHelper.trackUIFPS();
-    }
-
     protected Vector<BatchCallHelper.BatchCallResult> pendingBatchResult = new Vector<BatchCallHelper.BatchCallResult>();
     private BatchCallHelper.BatchCallResult currentBatchRun;
     protected Runnable queryPendingAndRun = new Runnable() {
@@ -145,7 +141,6 @@ public class RuntimeBridge {
 
             } else if(size==1){
                 willCallBatchRun = pendingBatchResult.remove(0);
-                trackUIFPS();
 
             }else{
                 while(true){
@@ -156,7 +151,6 @@ public class RuntimeBridge {
                     }
                     call.recycle();
                 }
-                trackUIFPS();
             }
 
             if(currentBatchRun!=null && currentBatchRun!=willCallBatchRun){
@@ -164,6 +158,8 @@ public class RuntimeBridge {
             }
             currentBatchRun = willCallBatchRun;
             currentBatchRun.run();
+
+            showFPSHelper.trackUIFPS();
         }
     };
 

@@ -6,6 +6,7 @@ import android.graphics.Canvas;
 import android.graphics.Rect;
 import android.support.annotation.Nullable;
 import android.support.v4.view.ViewCompat;
+import android.util.Log;
 import android.view.View;
 import android.webkit.WebView;
 
@@ -16,7 +17,8 @@ import android.webkit.WebView;
 public class SurfaceApiHW extends SurfaceApi{
     private CanvasApi drawingCanvas = new CanvasApi(null);
     private Runnable postOnDrawRun;
-    private static final int MaxAutoRedrawFlag = 10;
+    private static final int MaxAutoRedrawFlag = 5;
+    private static final int MaxAutoRedrawFlag_DEBUG = 50;
     private int autoRedrawFlag = 0;
 
     public SurfaceApiHW(Context context, RuntimeBridge runtimeBridge) {
@@ -59,14 +61,18 @@ public class SurfaceApiHW extends SurfaceApi{
             if(skipDrawFlag) return;
             super.draw(canvas);
             drawingCanvas.reset(canvas);
-            if(postOnDrawRun!=null) postOnDrawRun.run();
+            if(postOnDrawRun!=null){
+                postOnDrawRun.run();
+            }else{
+                Log.e("fax", "postOnDrawRun is null");
+            }
 
             skipDrawFlag = true;
             runtimeBridge.drawHTMLBoundToCanvas(canvas);
             skipDrawFlag = false;
 
-
-            if(autoRedrawFlag++ < MaxAutoRedrawFlag){
+            int maxRedraw = ShowFPSHelper.DEBUG_TRACK_UIFPS ? MaxAutoRedrawFlag_DEBUG : MaxAutoRedrawFlag;
+            if(autoRedrawFlag++ < maxRedraw){
                 ViewCompat.postInvalidateOnAnimation(this);
             }
         }
