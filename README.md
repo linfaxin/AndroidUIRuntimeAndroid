@@ -1,3 +1,11 @@
+### Unstable Warn
+
+This library was in the experiments.
+
+After Android5, the webview's performance is good, no need to use this library.
+
+If you wan to improve Android4's performance, it's better to pack a webkit core in your app (like xwalk);
+
 ### AndroidUIRuntime-Android
 
 Android's runtime for [AndroidUIX](https://github.com/linfaxin/AndroidUIX)
